@@ -1,4 +1,4 @@
-# Peemail — Game Design Document
+# Uri-Nation — Game Design Document
 
 **Version:** 0.6
 **Date:** 2026-02-16
@@ -7,7 +7,7 @@
 
 ## 1. Concept
 
-Peemail is a 2–4 player neighbourhood territory control game where each player is a dog on a walk. Players mark territory with urine, challenge other dogs' claims, form alliances, and try to dominate the neighbourhood — or push opponents back to their own backyards.
+Uri-Nation is a 2–4 player neighbourhood territory control game where each player is a dog on a walk. Players mark territory with urine, challenge other dogs' claims, form alliances, and try to dominate the neighbourhood — or push opponents back to their own backyards.
 
 Grounded in real canine chemical communication research (dogs really do encode identity, status, stress, and social intent in urine chemistry). Presented with accessible, humorous mechanics.
 
