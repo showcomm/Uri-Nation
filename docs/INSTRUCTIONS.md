@@ -1,4 +1,4 @@
-# Peemail — Game Instructions
+# Uri-Nation — Game Instructions
 
 *A neighbourhood territory game for 2–4 players. Ages 10+. Playing time: 45–90 minutes.*
 
@@ -408,4 +408,4 @@ Optional. Agree before the game.
 
 ---
 
-*Swagger, Nerves, Bond, and Drive are renamed from real hormones in dog urine: testosterone, cortisol, oxytocin, and dopamine. When your dog marks a fire hydrant, it really is sending peemail.*
+*Swagger, Nerves, Bond, and Drive are renamed from real hormones in dog urine: testosterone, cortisol, oxytocin, and dopamine. When your dog marks a fire hydrant, it really is establishing its uri-nation.*
