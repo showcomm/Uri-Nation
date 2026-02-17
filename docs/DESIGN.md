@@ -1,6 +1,6 @@
 # Uri-Nation — Game Design Document
 
-**Version:** 0.7
+**Version:** 0.8
 **Date:** 2026-02-17
 
 ---
@@ -18,7 +18,8 @@ Grounded in real canine chemical communication research (dogs really do encode i
 - **Same actions for everyone.** Every archetype can Claim, Challenge, Fortify, Bond, and use shortcuts. No exclusive abilities. Differentiation is through cost discounts at the Hormone Bank and resource income profiles (Path B).
 - **Open information.** All claims are visible. Fortify tokens are visible. Bond space connections are printed on the board. No hidden state to track.
 - **No decay.** Marks stay permanently until challenged off. No bookkeeping for mark aging.
-- **Scarcity drives drama.** Hormone Bucks accumulate at home. Bladder only refills from water sources. Action tokens must be purchased at the bank. Spending is a commitment. Losing a Challenge hurts — defender's claim token is destroyed (returned to bank).
+- **Two-layer economy.** Strategic resources (Hormone Bucks: Swagger, Nerves, Bond) accumulate and are spent on action token recipes. Operational resources (water and drive pegs) are received directly and drain constantly through play. Water is the universal cost of peeing; Drive is the cost of movement and hydration.
+- **Scarcity drives drama.** Action tokens require recipes combining Bucks and pegs. Losing a Challenge destroys the defender's claim token. Every action drains water. Every drink drains drive.
 - **The leash is the joke.** You're a dog on a leash trying to execute grand strategy while being walked by an oblivious owner. Movement constraints are comedic.
 
 ---
@@ -73,44 +74,46 @@ A third player (or one of the bonded players) can challenge the bond itself to b
 
 ### 4.1 Archetype System (Path B)
 
-Four archetypes define gameplay. Each has a unique income profile (what Hormone Bucks you receive at home) AND one cost discount at the Hormone Bank. Breeds are flavour — the picture on the card, a bio, maybe a minor once-per-game ability. Any dog breed can be any archetype.
+Four archetypes define gameplay. Each has a unique income profile (Hormone Bucks + pegs received at home) AND one cost discount at the Hormone Bank. Breeds are flavour — the picture on the card, a bio, maybe a minor once-per-game ability. Any dog breed can be any archetype.
 
 ### 4.2 The Four Archetypes
 
 **The Bruiser** 🐕‍🦺
 - Bowl: 6 water pegs, 2 drive pegs.
 - Walk: 1d6.
-- Home Refill: Swagger +3, Nerves +0, Bond +1, Drive +1.
-- Bank Discount: Claims cost 1 less Swagger.
+- Home Income: Swagger +3, Nerves +0, Bond +1 | Water: refill to full, Drive: +1 peg.
+- Bank Discount: Claims cost 1 less Swagger (1S instead of 2S).
 - Identity: Dominates the main path. Claims constantly. Low Drive means it sticks to the main loop. Steamroller on rails.
 
 **The Scrapper** 🐕
 - Bowl: 3 water pegs, 5 drive pegs.
 - Walk: 2d6.
-- Home Refill: Swagger +1, Nerves +1, Bond +1, Drive +3.
+- Home Income: Swagger +1, Nerves +1, Bond +1 | Water: refill to full, Drive: +3 pegs.
 - Bank Discount: Drinking from water sources costs no Drive.
 - Identity: Fastest mover. Explores the whole board. Tiny bladder keeps it hunting for water, but free drinking means all that Drive goes to shortcuts. Spreads wide and thin.
 
 **The Diplomat** 🦮
 - Bowl: 4 water pegs, 3 drive pegs.
 - Walk: 1d6+2.
-- Home Refill: Swagger +1, Nerves +0, Bond +3, Drive +1.
-- Bank Discount: Bond tokens cost 1 less Bond. Proposed bonds must be accepted for 1 turn (forced ceasefire).
+- Home Income: Swagger +1, Nerves +0, Bond +3 | Water: refill to full, Drive: +1 peg.
+- Bank Discount: Bond tokens cost 1 less Bond (1B instead of 2B). Proposed bonds must be accepted for 1 turn (forced ceasefire).
 - Constraint: Challenges at −1 to attack roll.
 - Identity: Kingmaker. Bonds everywhere. Relies on allies for protection. Weak alone but makes itself indispensable.
 
 **The Yapper** 🐩
 - Bowl: 4 water pegs, 4 drive pegs.
 - Walk: 1d6.
-- Home Refill: Swagger +1, Nerves +2, Bond +1, Drive +2.
-- Bank Discount: Fortify tokens cost no Nerves (bladder only). Attackers take +1 Nerves when challenging Yapper claims.
+- Home Income: Swagger +1, Nerves +2, Bond +1 | Water: refill to full, Drive: +2 pegs.
+- Bank Discount: Fortify tokens cost no Nerves (0N instead of 2N). Attackers take +1 Nerves when challenging Yapper claims.
 - Identity: Turtle fortress builder. Must fortify constantly or Nerves pile up and become a liability. Stays close to home, builds walls, waits for others to exhaust themselves.
 
 ### 4.3 Design Notes on Archetypes
 
 The four-way dynamic: Bruiser threatens with power, Scrapper with speed, Diplomat with alliances, Yapper with attrition. No archetype hard-counters another. Income profiles create natural playstyles; bank discounts amplify them.
 
-Total income per home pass is roughly equal across breeds (~5–6 Hormone Bucks) but weighted differently. The Yapper's high Nerves income is both a resource (fuel for fortify) and a liability (penalty above 5) — you must spend it or it hurts you.
+Hormone Buck income per home pass is roughly 4–5 Bucks each, weighted differently. Peg income varies by bowl size. Everyone refills water to full at home — the difference is how fast you drain it (big bladder = more actions per fill) and how easily you can refill away from home (Scrapper drinks free).
+
+The Yapper's high Nerves income is both a resource (fuel for fortify) and a liability (penalty above 5) — you must spend it or it hurts you.
 
 ---
 
@@ -121,9 +124,9 @@ Each player's personal dashboard is an oversized dog bowl, unique to their arche
 ### 5.1 Physical Design
 
 - **Peg holes around the rim** — divided into two sections:
-  - **Water pegs** (blue) — represent bladder capacity. Remove a peg each time you spend bladder. Refill by drinking or passing home.
-  - **Drive pegs** (yellow/orange) — represent energy. Remove a peg to use shortcuts or drink from water sources. Refill from Hormone Buck income.
-- **Centre dish** — holds the player's stockpiled action tokens (claim, fortify, bond) and unspent Hormone Bucks cards.
+  - **Water pegs** (blue) — represent bladder capacity. Remove a peg when performing any pee-based action (Claim, Challenge, Bond). Refill by drinking or passing home.
+  - **Drive pegs** (yellow/orange) — represent energy. Remove a peg to use shortcuts or drink from water sources. Received directly at home — NOT purchased at the bank.
+- **Centre dish** — holds the player's stockpiled action tokens (claim, fortify, bond, challenge) and unspent Hormone Bucks cards.
 - **Colour-coded** to match player colour — the bowl IS your colour reference at the table.
 
 ### 5.2 Bowl Configurations by Archetype
@@ -143,39 +146,78 @@ Each player's personal dashboard is an oversized dog bowl, unique to their arche
 
 ---
 
-## 6. Economy — Hormone Bucks and the Bank
+## 6. Economy — Two Layers
 
-### 6.1 Hormone Bucks
+### 6.1 Resource Types
 
-Four types of currency cards, matching the four chemicals:
+The economy has two distinct layers:
 
-- **Swagger** 💪 — buys Claim tokens and funds Challenges.
-- **Nerves** 😰 — buys Fortify tokens. Liability above 5 (excess penalizes Challenge rolls).
-- **Bond** 🤝 — buys Bond tokens. Also pays alliance maintenance (1 per turn per bond).
-- **Drive** ⚡ — converted to Drive pegs in your bowl. Drive pegs are spent on shortcuts and drinking.
+**Strategic resources — Hormone Bucks (cards/chips)**
+- **Swagger** 💪 — offensive currency. Used in Claim and Challenge recipes.
+- **Nerves** 😰 — defensive currency. Used in Fortify and Challenge recipes. Liability above 5 (excess penalizes Challenge rolls).
+- **Bond** 🤝 — diplomatic currency. Used in Bond recipes. Also pays alliance maintenance (1 per turn per active bond).
 
-Players receive Hormone Bucks based on their breed's income profile when passing Home Turf, plus territory bonuses.
+Hormone Bucks are received at home based on breed income profile + territory bonuses. They accumulate between turns. Spent at the Hormone Bank to purchase action tokens.
 
-### 6.2 The Hormone Bank
+**Operational resources — Pegs (physical pegs in bowl)**
+- **Water pegs** (blue) 💧 — bladder. Spent whenever you pee: Claim (1), Challenge (1), Bond (1). NOT spent on Fortify (fortify = poo, not pee). Refilled at home (full) or water sources (variable).
+- **Drive pegs** (yellow) ⚡ — energy. Spent on shortcuts (1 per space off main loop) and drinking from water sources (1 per drink, Scrapper: free). Received directly at home — not purchased at the bank.
+
+Pegs are received directly — no bank exchange needed. They drain constantly through play, creating logistical pressure underneath the strategic Hormone Buck decisions.
+
+### 6.2 The Hormone Bank — Action Token Recipes
 
 A central tray where players exchange Hormone Bucks for action tokens. Exchange happens **at the start of your turn only** — before you roll and move. This forces planning ahead.
 
-**Base Exchange Rates:**
+Each action token has a **recipe** — a specific combination of Hormone Bucks required to purchase it. Water and Drive pegs are spent later when the token is deployed, not at the bank.
 
-| Action Token | Cost | Notes |
-|-------------|------|-------|
-| Claim (pee puddle disk) | 2 Swagger | Bruiser: 1 Swagger |
-| Fortify | 2 Nerves | Yapper: 1 Nerves (bladder peg only) |
-| Bond | 2 Bond | Diplomat: 1 Bond |
-| Drive peg refill | 1 Drive Buck per peg | Added to bowl |
+**Action Token Recipes (base costs):**
 
-All action tokens except Drive peg refills also cost 1 bladder peg from your bowl when placed on the board.
+| Token | Swagger | Nerves | Bond | Notes |
+|-------|---------|--------|------|-------|
+| **Claim** (pee puddle) | 2 | — | — | Bruiser: 1 Swagger |
+| **Challenge** | 2 | 1 | — | Diplomat: −1 to attack roll |
+| **Fortify** | — | 2 | — | Yapper: 0 Nerves |
+| **Bond** | — | — | 2 | Diplomat: 1 Bond |
 
-### 6.3 Stockpiling
+**Peg costs when deploying on the board:**
 
-Players carry unspent action tokens between turns. Tokens sit in the centre of your dog bowl. You can save up and deploy multiple tokens over several turns — e.g. stockpile claim tokens then go on a claiming spree.
+| Token | Water Pegs | Drive Pegs | Notes |
+|-------|-----------|------------|-------|
+| **Claim** | 1 | — | Pee-based: costs water |
+| **Challenge** | 1 | — | Pee-based: costs water |
+| **Fortify** | 0 | — | Poo-based: no water cost. The one action you can do with an empty bladder. |
+| **Bond** | 1 | — | Pee-based: costs water (scent marking at hydrant) |
 
-**Open question:** Should there be a carrying capacity / hand limit? A natural limit might emerge from balance testing. Flag for simulator.
+### 6.3 Income — What You Get at Home
+
+When passing your Home Turf, you receive:
+
+| Archetype | Swagger | Nerves | Bond | Water Pegs | Drive Pegs |
+|-----------|---------|--------|------|-----------|------------|
+| Bruiser   | +3      | +0     | +1   | Refill to full (6) | +1 |
+| Scrapper  | +1      | +1     | +1   | Refill to full (3) | +3 |
+| Diplomat  | +1      | +0     | +3   | Refill to full (4) | +1 |
+| Yapper    | +1      | +2     | +1   | Refill to full (4) | +2 |
+
+**Territory bonus:** For every 3 connected territories held (excluding Home Turf), +1 Hormone Buck of player's choice.
+
+**Desperation bonus:** Fewer than 3 non-home territories = +2 Nerves (both a resource and a liability).
+
+### 6.4 Economic Rhythm
+
+The intended pace: one home pass gives you slightly more than the cost of one action. You can act almost every turn, but bigger plays (Challenge, multi-claim pushes) require saving up across 2–3 home passes. Water drains constantly and forces route planning. Drive drains when you explore or drink, creating a mobility budget.
+
+- **Bruiser** gets 3 Swagger per pass → can buy a Claim (cost 1S discounted) almost every turn, plus save toward Challenges. But low Drive (+1) means it rarely leaves the main loop.
+- **Scrapper** gets 1 Swagger per pass → needs 2 passes to buy a Claim. But massive Drive (+3) and free drinking means it covers ground and stays hydrated. Quantity through speed, not income.
+- **Diplomat** gets 3 Bond per pass → can buy a Bond token (cost 1B discounted) every turn. Low Swagger means claims and challenges are expensive. Wins through alliances, not force.
+- **Yapper** gets 2 Nerves per pass → can Fortify for free (0N discount) every turn. But unused Nerves accumulate and penalize challenges above 5. Must fortify or suffer.
+
+### 6.5 Stockpiling
+
+Players carry unspent action tokens and Hormone Bucks between turns. Tokens and Bucks sit in the centre of your dog bowl. You can save up and deploy over several turns.
+
+Stockpiling is unlimited, but self-regulates: hoarding Claim tokens is useless without the water to deploy them and the position to place them. The adjacency defense bonus (+1 per adjacent friendly territory) means challenging well-established clusters is expensive in Nerves, discouraging blind aggression from hoarders.
 
 ---
 
@@ -185,39 +227,47 @@ Every archetype can perform every action. Action tokens are purchased at the Hor
 
 ### 7.1 Claim
 
-Place a claim token (pee puddle disk in your colour) on an empty territory space adjacent to your path position. Costs 1 bladder peg from bowl + the claim token you purchased.
+Deploy a claim token (pee puddle disk in your colour) on an empty territory space adjacent to your path position. Costs 1 water peg from your bowl at time of placement.
 
 One claim size only. Defense base value = 1.
 
 ### 7.2 Challenge
 
-Two-step process:
+Two-step process. Requires a challenge token (purchased at the bank) + 1 water peg.
 
-1. **Roll to clear.** Attacker spends bladder + Swagger Bucks (exact cost TBD via simulator). Contested d6 roll:
-   - Attacker: d6 − Nerves penalty (if Nerves > 5, subtract excess). Diplomat: additional −1.
+1. **Roll to clear.** Contested d6 roll:
+   - Attacker: d6 − Nerves penalty (if Nerves Bucks held > 5, subtract excess). Diplomat: additional −1.
    - Defender: d6 + Fortify tokens + adjacency bonus (max +3) + Home Turf (+3) + Bond protection (+1 if bonded at adjacent bond space).
    - Attacker must beat defender. Ties to defender.
 
-2. **Optionally claim.** If attacker wins the roll, the defender's claim token is **destroyed** (returned to the Hormone Bank). The space is now empty. The attacker may then spend a claim token from their bowl to immediately claim the space. If they don't have one, the space stays empty — available for anyone.
+2. **Optionally claim.** If attacker wins the roll, the defender's claim token is **destroyed** (returned to the Hormone Bank). The space is now empty. The attacker may then spend a claim token from their bowl (+ 1 additional water peg) to immediately claim the space. If they don't have one or can't afford the water, the space stays empty — available for anyone.
 
 **Three possible outcomes:**
-- Win roll + have claim token → full conquest (clear and claim).
-- Win roll + no claim token → denial (clear only, space is empty).
-- Lose roll → resources wasted, attacker gains +1 Nerves.
+- Win roll + have claim token + have water → full conquest (clear and claim). Costs: 1 challenge token + 1 claim token + 2 water pegs total.
+- Win roll + no claim token (or no water) → denial (clear only, space is empty). Costs: 1 challenge token + 1 water peg.
+- Lose roll → challenge token wasted, attacker gains +1 Nerves Buck.
 
-Attacking a Yapper's claim: attacker takes +1 Nerves win or lose.
+Attacking a Yapper's claim: attacker takes +1 Nerves Buck win or lose.
 
 ### 7.3 Challenge a Bond
 
-Same contested roll mechanic, but targeting a bond space instead of a territory. If successful, both players' bond tokens are removed from that bond space, breaking the alliance and unlocking all territories in that bond's area of influence.
+Same contested roll mechanic, but targeting a bond space instead of a territory. Costs 1 challenge token + 1 water peg.
+
+- Attacker: d6 − Nerves penalty.
+- Defender: d6 + 1 per bond token on the space (max +2 if both players bonded there).
+- If successful, both players' bond tokens are removed from that bond space, breaking the alliance and unlocking all territories in that bond's area of influence.
 
 ### 7.4 Fortify
 
-Place a fortify token on one of your claimed territories adjacent to your path position. Costs 1 bladder peg + the fortify token you purchased. Max 3 fortify tokens per territory. Each adds +1 defense.
+Deploy a fortify token on one of your claimed territories adjacent to your path position. **No water peg cost** — fortify is poo, not pee. This is the one action you can do when your bladder is empty.
+
+Max 3 fortify tokens per territory. Each adds +1 defense.
 
 ### 7.5 Bond
 
-Place a bond token (in your colour) on a bond space adjacent to your path position. If another player later places their bond token on the same bond space, the bond is formed — neither player can challenge the other's claims on territories connected to that bond space.
+Deploy a bond token (in your colour) on a bond space adjacent to your path position. Costs 1 water peg (scent marking at the hydrant).
+
+If another player later places their bond token on the same bond space, the bond is formed — neither player can challenge the other's claims on territories connected to that bond space.
 
 Diplomat's bond proposals must be accepted for at least 1 turn (forced ceasefire).
 
@@ -264,10 +314,10 @@ Bladder (water pegs) does NOT auto-refill. The only ways to restore water pegs:
 
 | Grade | Count | Effect |
 |-------|-------|--------|
-| 💎 Clean | ~5 cards | Full refill. Possible +1 Bond bonus. |
+| 💎 Clean | ~5 cards | Full refill. Possible +1 Bond Buck bonus. |
 | 👍 Decent | ~8 cards | Half refill (rounded up). No side effects. |
-| 😬 Questionable | ~7 cards | Half refill + penalty (+1 Nerves, or −1 Drive peg, or −1 Swagger). |
-| ☠️ Terrible | ~4 cards | No refill + penalty (+2 Nerves, or lose 1 water peg, or skip next action). |
+| 😬 Questionable | ~7 cards | Half refill + penalty (+1 Nerves Buck, or −1 Drive peg, or −1 Swagger Buck). |
+| ☠️ Terrible | ~4 cards | No refill + penalty (+2 Nerves Bucks, or lose 1 water peg permanently this cycle, or skip next action). |
 
 Drinking is always optional. You may pass through a Water Source and choose not to drink.
 
@@ -275,19 +325,20 @@ Drinking is always optional. You may pass through a Water Source and choose not 
 
 - Home water is free and full but requires routing through home.
 - Water Sources cost Drive to use (except Scrapper) and carry risk.
-- Bruiser (6 water pegs) needs water less often.
-- Scrapper (3 water pegs) is constantly hunting for water, but free drinking means all Drive goes to shortcuts.
+- Bruiser (6 water pegs) needs water less often — can deploy 6 pee-based actions before needing a refill.
+- Scrapper (3 water pegs) empties fast but drinks free — constant water hunting without the Drive tax.
 - Controlling territories around a Water Source forces opponents into your zone to drink.
+- Fortify is the only action that doesn't cost water — when your bladder is empty, you can still reinforce.
 
 ---
 
 ## 10. Turn Structure
 
-1. **Bank Phase.** Exchange Hormone Bucks for action tokens at the Hormone Bank. Refill Drive pegs. This happens before rolling — you must plan ahead.
+1. **Bank Phase.** Exchange Hormone Bucks for action tokens (claim, challenge, fortify, bond) at the Hormone Bank. This happens before rolling — you must plan ahead.
 2. **Roll and Move.** Roll walk dice. Advance along path. Spend Drive pegs for shortcuts. Optionally drink at Water Sources (costs 1 Drive peg, Scrapper free). Trigger Events square.
-3. **Action Phase.** At your stopping position: place a Claim, Fortify, Bond, initiate a Challenge, or Pass.
-4. **Refill Phase** (after all players). Collect Hormone Bucks based on breed income + territory bonuses. Bladder only from water/home (during movement).
-5. **Maintenance.** Pay Bond Buck maintenance. Housebound check.
+3. **Action Phase.** At your stopping position: deploy a Claim, Fortify, Bond, initiate a Challenge, or Pass. Spend water pegs as required.
+4. **Refill Phase** (after all players). Collect Hormone Bucks based on breed income + territory bonuses. Water and Drive pegs only refill at home or water sources (during movement phase).
+5. **Maintenance.** Pay Bond Buck maintenance (1 per active bond). Housebound check.
 
 **Turn order:** Player with least territory goes first (catch-up mechanic). Ties: roll off.
 
@@ -309,20 +360,22 @@ Drawn when landing on or passing through the Events square.
 
 Categories: Weather (affect all), Personal (affect drawer), Neighbourhood (affect board state). Some cards are HOLD (play when chosen, max 2 in hand).
 
-Can create/remove temporary Water Sources, block paths, reset marks, adjust chemicals.
+Can create/remove temporary Water Sources, block paths, reset marks, adjust Hormone Bucks or pegs.
 
 ---
 
 ## 13. Components List
 
-- 1 Neighbourhood game board
-- 4 Dog breed cards (with base Hormone Bucks, description, strategy)
+- 1 Neighbourhood game board (paths, territory spaces, bond spaces, water sources, events square)
+- 4 Dog breed cards (with income profile, description, strategy tips)
 - 4 Dog figurines
-- 4 Dog Bowls (unique per archetype, colour-coded, peg holes for water and drive)
-- Water pegs (blue) and Drive pegs (yellow/orange)
-- Hormone Bank tray
-- Hormone Bucks cards (Swagger, Nerves, Bond, Drive)
+- 4 Dog Bowls (unique per archetype, colour-coded, peg holes for water and drive around rim, centre dish for token/Buck storage)
+- Water pegs (blue) — quantity per player varies by archetype
+- Drive pegs (yellow/orange) — quantity per player varies by archetype
+- Hormone Bank tray (central exchange station)
+- Hormone Bucks (cards or chips: Swagger 💪, Nerves 😰, Bond 🤝)
 - Claim tokens — pee puddle disks in 4 player colours
+- Challenge tokens — in 4 player colours
 - Fortify tokens in 4 player colours
 - Bond tokens in 4 player colours
 - 1 Neighbourhood Events deck (24 cards)
@@ -340,7 +393,7 @@ Agree before game. Each is once-per-game unless noted.
 - **Distracted Owner** — Roll doubles = +2 spaces, may reverse direction.
 - **Zoomies** (Scrapper) — Triple walk roll, no action.
 - **Butt Sniff Diplomacy** (Diplomat) — Adjacent to another pawn, both reveal Hormone Bucks. Free.
-- **Paranoid Patrol** (Yapper) — Fortify all own claims within 3 spaces. Free.
+- **Paranoid Patrol** (Yapper) — Fortify all own claims within 3 spaces. Free (still costs fortify tokens from bowl).
 - **Leg Day** (Bruiser) — Claim or Challenge from 2 spaces away.
 
 ---
@@ -358,32 +411,38 @@ Agree before game. Each is once-per-game unless noted.
 ## 16. Open Design Questions and Next Steps
 
 ### Balance Tuning (needs simulator)
-- Hormone Bank exchange rates — are base costs of 2 per action token right?
-- Income profiles — total ~5-6 Bucks per home pass, but exact numbers need testing.
-- Stockpile limits — should there be a max number of action tokens carried? Or does the economy self-regulate?
-- Adjacency bonus cap (+3 may be too strong for Yapper fortress strategy).
-- Water Chance deck distribution — 4 Terrible cards in 24 — too punishing or not enough?
-- 30-turn game length — is this right for the pace?
-- Win threshold of 10 territories — too many? Too few?
-- Challenge costs — exact Swagger/Nerves spend for initiating a challenge.
+- Recipe costs — are 2 Swagger/Nerves/Bond per token the right base? Should Challenge cost more Swagger than Claim?
+- Income profiles — current numbers give ~4-5 Bucks per home pass. Need testing to confirm pacing.
+- Stockpile limits — currently unlimited. Self-regulating via water drain and adjacency defense? Or add explicit cap?
+- Adjacency bonus cap — +3 may be too strong for Yapper fortress strategy.
+- Water Chance deck distribution — 4 Terrible in 24 cards — too punishing or not enough?
+- 30-turn game length — right pace?
+- Win threshold of 10 territories — right for the new board where territories are separate from paths?
+- Full conquest cost (challenge + claim + 2 water) — is that too expensive or about right?
+- Nerves penalty threshold — 5 Nerves Bucks held triggers penalty. Right number?
+- Territory bonus rate — +1 Buck per 3 connected territories. Too slow? Too fast?
 
 ### Board Design (needs prototyping)
 - Exact topology of main loop, side streets, and shortcuts.
 - Territory space count and distribution along paths.
 - Bond space placement (6–8 total) — near borders? Near water? Creating alliance corridors?
 - Water Source placement relative to Home Turfs and contested zones.
+- How many territories connect to each bond space (area of influence size)?
 - Whether shortcuts create degenerate movement patterns.
 
 ### Component Design
 - Bowl styling per archetype — chunky Bruiser, small Scrapper, elegant Diplomat, jagged Yapper. Art direction TBD.
 - Claim token shape — pee puddle disk confirmed. Exact design TBD.
-- Fortify token shape — options: scratched ground, dirt mound, or something else. NOT poo (keeps tone accessible).
+- Fortify token shape — poo emoji? Scratched ground? Dirt mound? Tone consideration: poo keeps the dog theme but may narrow audience. TBD.
+- Challenge token shape — TBD.
 - Bond space iconography — fire hydrants, bus stops, lamp posts with radiating influence lines.
+- Hormone Bucks format — cards? Chips? Paper money?
 
 ### Simulator Requirements
-- Web-based, adjustable parameters for all income rates, bank exchange costs, deck distributions.
+- Web-based, adjustable parameters for all income rates, recipe costs, deck distributions.
+- Model the two-layer economy: Hormone Bucks (strategic) + pegs (operational).
 - Automated play with simple AI strategies (aggressive, defensive, balanced, random).
-- Output: average game length, win rate by archetype, average territory held, resource utilization, stockpile patterns.
+- Output: average game length, win rate by archetype, average territory held, resource utilization, stockpile patterns, water refill frequency.
 - Goal: find parameter ranges where all four archetypes are competitive and games end in 20–40 turns.
 
 ### Future Expansion Ideas
