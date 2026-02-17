@@ -6,20 +6,24 @@
 
 ## What's in the Box
 
-- 1 Neighbourhood game board (main loop with side streets and shortcuts)
-- Dog breed cards (multiple breeds per archetype)
-- Mark tokens: Small and Large disks in 4 player colours
-- Fortify tokens in 4 player colours
-- Bond tokens (white)
-- 4 Dog pawns
-- 4 Chemical track cards with tracking pegs
-- 4 Bladder track cards with tracking pegs
-- 1 Neighbourhood News deck
-- 1 Water Quality deck (small)
+- 1 Neighbourhood game board 
+- Dog breed cards (multiple breeds per archetype with base Hormone Bucks, description, strategy)
+- 8 Dog Pawns
+- 6 Dog Bowls with peg holes around rim
+- Bladder tracking pegs
+- Hormone bank tray (exchange hormones for message markers)
+- Action tokens: Mark tokens: Disks in 6 player colours. Alternately, each player has action tokens in their colour and the board territories have sections for claim, fortify, and bond.
+- Fortify tokens in 6 player colours
+- Ally tokens in 6 player colours
+- Hormone Bucks (cards for swagger, agression, and flirt that players receive andtrade for action tokens.)
+- 1 Neighbourhood Events deck (24 cards)
+- 1 Water Chance Deck (24 cards)
 - 2 Six-sided dice
 - This rules booklet
 
 ---
+
+Play order: purchase action tokens
 
 ## Goal
 
