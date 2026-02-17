@@ -2,54 +2,48 @@
 
 **A neighbourhood territory control board game where players are dogs competing through strategic urine marking.**
 
-2–4 players. Ages 10+. 45–90 minutes.
-
-Players choose a dog breed, manage their chemical resources (Swagger, Nerves, Bond, Drive), and compete to control neighbourhood territory through strategic marking, challenges, alliances, and fortification. Grounded in real canine chemical communication science. Presented as a light, funny strategy game.
+Players choose a dog breed, manage their chemical resources (Swagger, Nerves, Bond, Drive), and compete to control neighbourhood territory through strategic marking, challenges, alliances, and fortification.
 
 ## Project Structure
 
 ```
 /docs          - Game design documents and rules
-/simulation    - Balance simulation (planned)
-/prototype     - Visual prototype (planned)
+/simulation    - Python batch simulation for balance testing
+/prototype     - Visual prototype (React)
 ```
 
 ## Current Status
 
-**Version 0.6 — Design & Prototyping**
+**Phase 1: Design &amp; Prototyping**
 
-- [x] Core concept and mechanics design (v6)
-- [ ] Balance simulator (web-based, adjustable parameters)
-- [ ] Board layout and topology
+- [x] Core concept and mechanics design
 - [ ] Visual prototype for gameplay feel
+- [ ] Batch simulation for balance testing
 - [ ] Playtesting and iteration
 
 ## Game Overview
 
-### Archetypes (4 types, breeds are cosmetic flavour)
-- **The Bruiser** — Big, confident. Cheap claims, big bladder, slow and predictable.
-- **The Scrapper** — Small, fast. Free detours, everywhere at once, always thirsty.
-- **The Diplomat** — Friendly, social. Cheap alliances, forced ceasefires, can't fight well.
-- **The Yapper** — Loud, annoying. Cheap fortification, stressful to attack, turtle strategy.
+### Dog Breeds (4 classes)
+- **The Bruiser** (large, confident) — High Swagger, big bladder, fewer actions
+- **The Scrapper** (small, confident) — Small bladder, high frequency, concentrated marks
+- **The Diplomat** (medium, social) — Balanced, excels at alliances
+- **The Nervous Sniffer** (medium, anxious) — High Drive/Nerves, intelligence-gathering playstyle
 
 ### Chemical Resources
-- **Swagger** 💪 — Assertiveness. Powers claims and challenges.
-- **Nerves** 😰 — Stress/defense. Powers fortification. Liability above 5.
-- **Bond** 🤝 — Social currency. Powers alliances.
-- **Drive** ⚡ — Navigation fuel. Powers detours off the main loop.
+- **Swagger** — Assertiveness. Powers claims and challenges.
+- **Nerves** — Stress/defense. Powers fortification. Accumulates as liability.
+- **Bond** — Social currency. Powers alliances.
+- **Drive** — Alertness. Determines turn order, powers sniffing.
 
-### Core Mechanics
-- Same actions for everyone, one thing cheaper per archetype
-- Open information — all marks face-up, no hidden state
-- Bladder does NOT auto-refill — only from Home Turf (safe) or Water Sources (risky)
-- Adjacency defense bonus (+1 per friendly neighbour, max +3)
-- No decay — marks stay until overmarked
-- The leash is the joke — you're a dog executing grand strategy while being walked by an oblivious owner
+### Mark Actions
+- **Claim** — Mark an empty space
+- **Challenge** — Overmark an opponent's space (contested dice roll)
+- **Bond Signal** — Adjacent-mark to propose alliance
+- **Fortify** — Re-mark your own space to strengthen defense
 
 ### Win Conditions
-- Hold 10 non-home spaces, OR
-- Be the last player with territory, OR
-- Most territory after 30 turns
+- Control X spaces outside home turf, OR
+- Be the last player with marks on the board
 
 ## Science Background
 
