@@ -1,15 +1,15 @@
-# Peemail — Continuation Prompt
+# Uri-Nation — Continuation Prompt
 
-Use this prompt to pick up the Peemail board game design in a new Claude chat.
+Use this prompt to pick up the Uri-Nation board game design in a new Claude chat.
 
 ---
 
 ## The Prompt
 
 ```
-I'm designing a board game called "Peemail" — a 2–4 player neighbourhood territory control game where each player is a dog on a walk, marking territory through strategic urination. It's grounded in real canine chemical communication science but presented as a light, funny strategy game.
+I'm designing a board game called "Uri-Nation" (working title was "Peemail") — a 2–4 player neighbourhood territory control game where each player is a dog on a walk, marking territory through strategic urination. It's grounded in real canine chemical communication science but presented as a light, funny strategy game.
 
-The full design documents are in my GitHub repo: https://github.com/showcomm/peemail-boardgame
+The full design documents are in my GitHub repo: https://github.com/showcomm/Uri-Nation
 
 Please read both docs/DESIGN.md (the internal design document with all numbers, rationale, and open questions) and docs/INSTRUCTIONS.md (the player-facing rulebook, currently v6) to get up to speed.
 
