@@ -1,7 +1,7 @@
 # Uri-Nation — Game Design Document
 
-**Version:** 1.0
-**Date:** 2026-02-17
+**Version:** 1.1
+**Date:** 2026-02-18
 
 ---
 
@@ -20,6 +20,7 @@ Grounded in real canine chemical communication research (dogs really do encode i
 - **No decay.** Marks stay permanently until challenged off. No bookkeeping for mark aging.
 - **Everything is physical tokens.** No cards for resources. Bones, sticks, hearts, grit tokens, water pegs — all tactile pieces you collect, store in your bowl, and spend. The game state is entirely visible on the table.
 - **Pee + modifier = action.** Two sizes of pee disk (large and small) combined with different modifier tokens create all actions. Context determines what a pee does.
+- **Defense is strong.** Claims are hard to dislodge. Fortify and clustering make territories progressively more secure. Offense requires real commitment. This prevents frustrating sandcastle-kicking loops.
 - **Compulsory bonding.** Dogs can't help sniffing and marking a hydrant another dog has marked. Passing a bond space with tokens on it forces you to join the alliance.
 - **The leash is the joke.** You're a dog on a leash trying to execute grand strategy while being walked by an oblivious owner. Movement constraints are comedic.
 
@@ -33,23 +34,25 @@ The board represents a neighbourhood with three distinct space types:
 
 **Paths** — The walk routes. Your owner walks you along these. Paths form a main loop through the neighbourhood with side streets and shortcuts branching off. You move along paths; you do not claim them. The path is the sidewalk.
 
-**Territory spaces** — Branch off the paths. These are the yards, trees, poles, fences, and patches along the route. Players claim these by placing large pee disks. Each territory space can hold one large pee disk and up to 3 fortify tokens.
+**Territory spaces** — Branch off the paths. These are the yards, trees, poles, fences, and patches along the route. Players claim these by placing large pee disks. Each territory space can hold one large pee disk and up to 3 fortify tokens (small pee disks).
 
 **Bond spaces** — Fixed infrastructure along the paths: fire hydrants, bus stops, park benches, lamp posts. Visually represented as small circles with radiating lines indicating their area of influence (which adjacent territories they connect to). Bond spaces are NOT claimable — they are where alliances are physically anchored. Like the railways of Monopoly.
 
 ### 3.2 Special Spaces
 
-**🏠 Home Turf** — 4 locations, one per player, spaced around the main loop. Passing through your own Home Turf refills water to full for free (no Drive cost) and triggers income. +3 defense if challenged. Marks revert to owner after 1 turn if taken. Worth 0 VP.
+**🏠 Home Turf** — 4 locations, one per player, spaced around the main loop. Passing through your own Home Turf refills water to full for free (no Drive cost) and triggers income. +3 to defender's roll if challenged. Marks revert to owner after 1 turn if taken. Worth 0 VP.
 
 **💧 Water Sources** — 4–5 scattered around the board, intersecting path spaces. Varied appearances: puddles, ditches, garden taps, neighbour's bowls. Drinking costs 1 Drive token (Scrapper: free) and triggers a Water Chance deck draw.
 
 **📰 Neighbourhood Events** — One location on the main loop. Draw a card when passing through.
 
-### 3.3 Adjacency and Defense
+### 3.3 Adjacency and Connected Territories
 
-Territory spaces connected to the same path segment or bond space are adjacent. A claimed territory gets +1 defense for each adjacent friendly territory, max +3.
+Territory spaces connected to the same path segment or bond space are adjacent. Adjacency matters for one key rule:
 
-Build connected clusters, not scattered outposts. Attack clusters from the edges where the bonus is weakest.
+**The Cluster Rule:** If the defender holds **3 or more connected friendly territories** (including the one being challenged), **ties go to the defender** instead of triggering a re-roll. This is the reward for building clusters rather than scattering claims — your territories reinforce each other through sheer presence.
+
+This is a binary check (3+ connected or not), not a sliding scale. Either you have a cluster or you don't.
 
 ### 3.4 Bond Spaces — Areas of Influence
 
@@ -169,7 +172,7 @@ This means each modifier token has a clear identity and players can read intenti
 | **Bruiser** | Claims cost no Swagger (large pee + water only). |
 | **Scrapper** | Drinking costs no Drive. |
 | **Diplomat** | Ally initiation costs no Bond (small pee + water only). Alliances must be joined for at least 1 turn by passing players (forced ceasefire). Challenges at −1 to attack roll. |
-| **Yapper** | Fortify costs no Grit (small pee + water only). Attackers gain +1 Grit token debt (or equivalent penalty) when challenging Yapper claims. |
+| **Yapper** | Fortify costs no Grit (small pee + water only). Attackers gain +1 Grit token when challenging Yapper claims (win or lose). |
 
 ---
 
@@ -207,7 +210,7 @@ Four archetypes define gameplay. Each has a unique income profile (tokens receiv
 - Bowl: 4 water pegs.
 - Walk: 1d6.
 - Home Income: Swagger ×1, Grit ×2, Bond ×1, Drive ×2 | Water: refill to full.
-- Discount: Fortify costs no Grit. Attackers penalized when challenging Yapper claims.
+- Discount: Fortify costs no Grit. Attackers gain +1 Grit when challenging Yapper claims.
 - Identity: Turtle fortress builder. Must fortify constantly or Grit piles up unused. Stays close to home, builds walls, waits for others to exhaust themselves.
 
 ### 7.3 Income Summary
@@ -231,49 +234,110 @@ Total modifier token income per home pass is 5–6 tokens, weighted differently.
 
 ---
 
-## 8. Actions in Detail
+## 8. Challenge Resolution
 
-### 8.1 Claim
+The challenge mechanic is the core conflict system. It is designed to favor defense — claims should feel solid, not disposable.
+
+### 8.1 Basic Roll
+
+Both players roll 1d6. **Attacker must roll higher than defender to win.** Ties trigger a re-roll (see 8.2 for exception).
+
+### 8.2 Modifiers
+
+**Fortify (defender).** Each small pee disk (fortify token) on the territory adds **+1 to the defender's roll.** Max 3 fortify = defender rolls d6+3.
+
+**Cluster Rule (defender).** If the defender holds **3 or more connected friendly territories** (including the one being challenged), **ties go to the defender** instead of re-rolling. Clustering is its own fortification.
+
+**Home Turf (defender).** If the territory is the defender's Home Turf, defender gets **+3 to their roll.** Home Turf is nearly unassailable.
+
+**Alliance protection (defender).** If the territory is connected to a bond space where both attacker and defender are bonded, **the challenge is illegal** — alliances block challenges entirely on connected territories.
+
+**Grit penalty (attacker).** If the attacker is holding more than **5 Grit tokens**, subtract the excess from the attacker's roll. (e.g., holding 7 Grit = −2 to attack roll.) Accumulated stress makes you a worse fighter.
+
+**Diplomat penalty (attacker).** The Diplomat archetype rolls at **−1 to attack**. Diplomats are lovers, not fighters.
+
+**Yapper penalty (attacker).** Challenging a Yapper's claim gives the attacker **+1 Grit token** (win or lose). Yappers are annoying to fight.
+
+### 8.3 Challenge Probability Summary
+
+| Scenario | Attacker | Defender | Approx. Attack Success |
+|----------|----------|----------|----------------------|
+| Naked claim, isolated | d6 | d6, ties re-roll | ~42% (must roll higher) |
+| Naked claim, in cluster 3+ | d6 | d6, ties to defender | ~42% |
+| 1 fortify, isolated | d6 | d6+1, ties re-roll | ~28% |
+| 1 fortify, in cluster 3+ | d6 | d6+1, ties to defender | ~28% |
+| 2 fortify, isolated | d6 | d6+2, ties re-roll | ~17% |
+| 2 fortify, in cluster 3+ | d6 | d6+2, ties to defender | ~17% |
+| 3 fortify, isolated | d6 | d6+3, ties re-roll | ~9% |
+| 3 fortify, in cluster 3+ | d6 | d6+3, ties to defender | ~9% |
+| Home Turf | d6 | d6+3, ties re-roll | ~9% |
+| Home Turf + 3 fortify | d6 | d6+6, ties re-roll | ~0% (effectively impossible) |
+
+**Note:** The cluster rule (ties to defender) matters most for naked/lightly fortified claims where ties are common. Once fortify bonuses stack, ties become rare anyway. The cluster rule rewards building connected territory even before you can afford to fortify.
+
+### 8.4 Challenge Sequence (Full)
+
+1. **Attacker declares challenge** on an occupied territory adjacent to their path position.
+2. **Attacker pays:** 1 large pee disk + 1 water peg + 1 Drive token. The large pee disk is placed on the territory (over-pee).
+3. **Both roll d6.** Apply modifiers (fortify, cluster rule, Home Turf, Grit penalty, Diplomat penalty).
+4. **If attacker wins:**
+   - Both large pee disks are destroyed (returned to bank).
+   - All fortify tokens (small pees) on the space are removed.
+   - Territory is now **empty.**
+   - Attacker may immediately **re-claim** by spending 1 water peg + 1 Swagger token. A new large pee disk is placed.
+5. **If defender wins (or tie with cluster rule):**
+   - Attacker's large pee disk is destroyed.
+   - Defender's disk and fortify tokens remain.
+   - Attacker gains **+1 Grit token** (humiliation/stress).
+6. **If tie (no cluster rule):** Re-roll. Repeat until resolved.
+7. **Yapper bonus:** If the defender is a Yapper, attacker gains +1 Grit token regardless of outcome.
+
+### 8.5 Three Possible Outcomes
+
+- **Full conquest** (win + have swagger + have water): Territory cleared and re-claimed. Costs: 1 large pee + 2 water + 1 drive + 1 swagger.
+- **Denial** (win + no swagger or water): Territory cleared but left empty. Anyone can claim it. Costs: 1 large pee + 1 water + 1 drive.
+- **Wasted** (lose): Disk destroyed, +1 Grit. Costs: 1 large pee + 1 water + 1 drive + 1 Grit penalty.
+
+### 8.6 Challenge a Bond
+
+Same roll mechanic but targeting a bond space. Attacker pays 1 large pee + 1 water + 1 Drive.
+
+- Attacker: d6 (minus Grit penalty if applicable, minus Diplomat penalty if applicable).
+- Defender: d6 + 1 per small pee disk on the bond space. (A 3-way alliance has 3 small pees = d6+3.)
+- If attacker wins: entire bond stack is destroyed. All small pee disks returned to bank. Alliance dissolved.
+- If attacker loses: attacker's large pee disk destroyed, +1 Grit.
+
+Bigger alliances are harder to break. A 4-way alliance (d6+4) is nearly impossible to challenge head-on.
+
+---
+
+## 9. Actions in Detail
+
+### 9.1 Claim
 
 **Recipe:** Large pee + 1 water + 1 swagger. (Bruiser: no swagger needed.)
 
-Place a large pee disk on an **empty** territory space adjacent to your path position. Defense base value = 1. Build clusters for adjacency bonuses.
+Place a large pee disk on an **empty** territory space adjacent to your path position. Defense base value = d6 (no modifiers). Build clusters of 3+ for the tie-breaker advantage.
 
-### 8.2 Challenge
+### 9.2 Challenge
+
+See Section 8 for full resolution mechanics.
 
 **Recipe:** Large pee + 1 water + 1 drive.
 
-Place a large pee disk on an **occupied** territory space adjacent to your path position. This is the over-pee.
-
-**Step 1 — Roll.** Contested d6 roll:
-- Attacker: d6 − Grit penalty (if Grit tokens held > 5, subtract excess). Diplomat: additional −1.
-- Defender: d6 + Fortify tokens (small pees on space) + adjacency bonus (max +3) + Home Turf (+3) + Alliance protection (+1 per alliance at adjacent bond space).
-- Attacker must beat defender. Ties to defender.
-
-**Step 2 — Resolution.**
-- **Attacker wins:** Both large pee disks cancel out and are destroyed (returned to the bank). All fortify tokens (small pees) on that space are also removed. The territory is now empty. The attacker may immediately **re-claim** by spending 1 water + 1 swagger — the surviving large pee disk stays (or a new one is placed). 
-- **Attacker loses:** Attacker's large pee disk is destroyed. Defender's disk and fortify tokens remain. Attacker gains +1 Grit token (humiliation/stress).
-
-**Three possible outcomes:**
-- Win + have swagger + have water → **Full conquest.** Costs: 1 large pee + 2 water + 1 drive + 1 swagger.
-- Win + no swagger or water → **Denial.** Territory cleared but unclaimed. Costs: 1 large pee + 1 water + 1 drive.
-- Lose → **Wasted.** Disk destroyed, +1 Grit. Costs: 1 large pee + 1 water + 1 drive.
-
-Attacking a Yapper's claim: attacker takes +1 additional Grit token win or lose.
-
-### 8.3 Fortify
+### 9.3 Fortify
 
 **Recipe:** Small pee + 1 water + 1 grit. (Yapper: no grit needed.)
 
-Deploy a small pee disk on one of your claimed territories adjacent to your path position. Max 3 fortify tokens (small pees) per territory. Each adds +1 defense.
+Deploy a small pee disk on one of your claimed territories adjacent to your path position. Max 3 fortify tokens (small pees) per territory. Each adds +1 to defender's roll in a challenge.
 
-### 8.4 Ally (Initiate)
+### 9.4 Ally (Initiate)
 
 **Recipe:** Small pee + 1 water + 1 bond. (Diplomat: no bond needed.)
 
 Place a small pee disk on a bond space adjacent to your path position. This sets the trap — an open invitation that other dogs can't resist.
 
-### 8.5 Ally (Compulsory Join)
+### 9.5 Ally (Compulsory Join)
 
 **Trigger:** Any player passing through a bond space that has at least one small pee disk on it.
 
@@ -285,7 +349,7 @@ Once joined, the player is part of the alliance. All bonded players at that spac
 
 Alliances can be 2, 3, or 4 players. Every player who passes adds their marker.
 
-### 8.6 Break Alliance
+### 9.6 Break Alliance
 
 **Recipe:** Small pee + 1 water + 1 swagger.
 
@@ -293,44 +357,44 @@ On your turn, spend the recipe to destroy the **entire bond stack** at a bond sp
 
 Any bonded player can break it. This creates a game of chicken — everyone benefits from the protection, but eventually someone has to pay swagger to end it.
 
-### 8.7 Pass
+### 9.7 Pass
 
 Do nothing. Walk away.
 
 ---
 
-## 9. Movement
+## 10. Movement
 
-### 9.1 Persistent Position
+### 10.1 Persistent Position
 
 Dog figurines stay on the board between turns. You are always somewhere on a path. Next turn, continue from where you stopped.
 
-### 9.2 The Main Loop
+### 10.2 The Main Loop
 
 Owner walks the loop. Player chooses direction at game start (fixed for the game). Roll and advance each turn. Can stop early.
 
-### 9.3 Shortcuts (Leash Pull)
+### 10.3 Shortcuts (Leash Pull)
 
 At any junction, may leave the main path onto side streets or shortcuts. **Costs 1 Drive token per space off the main loop.** This represents pulling your owner off their usual route.
 
 Returning to the main loop is free — just move toward it on a subsequent turn.
 
-### 9.4 Passing Through
+### 10.4 Passing Through
 
 Water Sources and Events squares trigger when passed through (drinking is optional, costs 1 Drive token — Scrapper: free). Bond spaces with active alliances trigger compulsory join (costs 1 water peg). Claim/Fortify/Ally actions only at your stopping position.
 
 ---
 
-## 10. Water and Bladder
+## 11. Water and Bladder
 
-### 10.1 Core Rule
+### 11.1 Core Rule
 
 Bladder (water pegs) does NOT auto-refill. The only ways to restore water pegs:
 
 - **Home Turf:** Pass through your own home → refill to full. Free. No Drive cost.
 - **Water Source:** Stop and drink → costs 1 Drive token (Scrapper: free) → draw from Water Chance deck.
 
-### 10.2 Water Chance Deck (24 cards)
+### 11.2 Water Chance Deck (24 cards)
 
 | Grade | Count | Effect |
 |-------|-------|--------|
@@ -341,7 +405,7 @@ Bladder (water pegs) does NOT auto-refill. The only ways to restore water pegs:
 
 Drinking is always optional. You may pass through a Water Source and choose not to drink.
 
-### 10.3 Strategic Implications
+### 11.3 Strategic Implications
 
 - Home water is free and full but requires routing through home.
 - Water Sources cost Drive and carry risk.
@@ -352,7 +416,7 @@ Drinking is always optional. You may pass through a Water Source and choose not 
 
 ---
 
-## 11. Turn Structure
+## 12. Turn Structure
 
 1. **Income Phase** (at home only). When you pass or land on your Home Turf: collect modifier tokens based on breed income + territory bonuses. Refill water pegs to full.
 2. **Roll and Move.** Roll walk dice. Advance along path. Spend Drive tokens for shortcuts. Optionally drink at Water Sources (costs 1 Drive, Scrapper free). Compulsory ally join at active bond spaces (costs 1 water). Trigger Events square.
@@ -365,7 +429,7 @@ Drinking is always optional. You may pass through a Water Source and choose not 
 
 ---
 
-## 12. Win Conditions
+## 13. Win Conditions
 
 1. Hold **10 non-home territories** at end of any turn.
 2. **Last player** with non-home territory.
@@ -375,7 +439,7 @@ Housebound (0 non-home territories for 2 turns): walk halved, no territory bonus
 
 ---
 
-## 13. Neighbourhood Events Deck (24 cards)
+## 14. Neighbourhood Events Deck (24 cards)
 
 Drawn when landing on or passing through the Events square.
 
@@ -385,7 +449,7 @@ Can create/remove temporary Water Sources, block paths, reset marks, award or re
 
 ---
 
-## 14. Components List
+## 15. Components List
 
 - 1 Neighbourhood game board (paths, territory spaces, bond spaces, water sources, events square)
 - 4 Dog breed cards (with income profile, description, strategy tips)
@@ -406,7 +470,7 @@ Can create/remove temporary Water Sources, block paths, reset marks, award or re
 
 ---
 
-## 15. Walk Tricks (Optional Module)
+## 16. Walk Tricks (Optional Module)
 
 Agree before game. Each is once-per-game unless noted.
 
@@ -419,7 +483,24 @@ Agree before game. Each is once-per-game unless noted.
 
 ---
 
-## 16. Science References
+## 17. Advanced Variant: Secret Water Bidding
+
+**For experienced players who want more strategic depth in challenges.**
+
+Instead of a simple d6 vs d6 roll, both players may secretly add water pegs to their roll. Each water peg adds +1 to your roll result. Reveal simultaneously after rolling.
+
+- Both roll d6.
+- Before revealing, each player secretly holds 0–N water pegs in their fist.
+- Reveal simultaneously. Add water pegs to roll.
+- All bid water pegs are spent regardless of outcome.
+
+This turns challenges into a poker-style bluff. A player might burn 3 water pegs to guarantee a win, but they've crippled their bladder for future actions. The defender might bid nothing, gambling that fortify bonuses are enough.
+
+**Use this variant only after learning the base game.** It increases challenge depth but slows play.
+
+---
+
+## 18. Science References
 
 - Quaranta, A. et al. (2025). "Decoding dog communication through the physiology and behavior of urine marking." Scientific Reports.
 - Dzieciol, M. et al. (2018). "Identification of putative volatile sex pheromones in female domestic dogs." Animal Reproduction Science.
@@ -429,20 +510,21 @@ Agree before game. Each is once-per-game unless noted.
 
 ---
 
-## 17. Open Design Questions and Next Steps
+## 19. Open Design Questions and Next Steps
 
 ### Balance Tuning (needs simulator)
 - Recipe costs — are the 1-modifier-per-action costs right? Should Challenge cost more Drive?
 - Income profiles — 5-6 tokens per home pass. Need testing to confirm pacing.
-- Stockpile limits — currently unlimited. Self-regulating via water drain and adjacency defense?
-- Adjacency bonus cap — +3 may be too strong for Yapper fortress strategy.
+- Stockpile limits — currently unlimited. Self-regulating via water drain?
+- Cluster rule threshold — is 3 connected territories the right number?
 - Water Chance deck distribution — 4 Terrible in 24 cards — right?
 - 30-turn game length — right pace?
 - Win threshold of 10 territories — right for new board topology?
 - Full conquest cost (1 large pee + 2 water + 1 drive + 1 swagger) — balanced?
-- Grit penalty threshold — 5 Grit tokens held triggers challenge penalty. Right number?
+- Grit penalty threshold — 5 Grit tokens triggers challenge penalty. Right number?
 - Territory bonus rate — +1 token per 3 connected territories. Too slow? Too fast?
 - Compulsory bond economics — is 1 water the right cost for forced join?
+- Bond challenge scaling — d6 + number of bonded players. Too strong at 3-4 players?
 
 ### Board Design (needs prototyping)
 - Exact topology of main loop, side streets, and shortcuts.
@@ -464,6 +546,7 @@ Agree before game. Each is once-per-game unless noted.
 ### Simulator Requirements
 - Web-based, adjustable parameters for all income rates, recipe costs, deck distributions.
 - Model the unified token economy: modifier tokens + water pegs + two pee disk sizes.
+- Model challenge resolution with fortify, cluster rule, and Grit penalty.
 - Model compulsory bond joining and alliance breaking.
 - Automated play with simple AI strategies (aggressive, defensive, balanced, random).
 - Output: average game length, win rate by archetype, average territory held, resource utilization, stockpile patterns, water refill frequency, challenge success rates, alliance duration.
@@ -476,3 +559,4 @@ Agree before game. Each is once-per-game unless noted.
 - Campaign mode (series of games, persistent neighbourhood).
 - Physical prototype for playtesting.
 - Digital version (board topology is graph-based, translates well).
+- Secret Water Bidding as official advanced module.
