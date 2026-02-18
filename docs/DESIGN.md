@@ -1,6 +1,6 @@
 # Uri-Nation — Game Design Document
 
-**Version:** 1.2
+**Version:** 1.2.1
 **Date:** 2026-02-18
 
 ---
@@ -256,9 +256,11 @@ All actions are built from pee disks + modifier tokens. Water creates pee. Modif
 
 ### 8.1 The Four Archetypes
 
+All archetypes roll **2d6** for movement.
+
 **The Bruiser** 🐕‍🦺
 - Bowl: 6 water pegs.
-- Walk: 1d6.
+- Walk: 2d6.
 - Modifier Max: Swagger 3, Drive 2, Grit 2, Bond 1.
 - Discount: Claims cost no Swagger.
 - Identity: Dominates its sidewalk. Claims constantly and cheaply. Low Drive (2) and low Bond (1) mean it stays on its side and fights alone. 3 Swagger is pure surplus for re-claims and breaking alliances. Steamroller on rails.
@@ -268,18 +270,18 @@ All actions are built from pee disks + modifier tokens. Water creates pee. Modif
 - Walk: 2d6.
 - Modifier Max: Swagger 2, Drive 3, Grit 1, Bond 2.
 - Discount: Drinking costs no Drive.
-- Identity: Fastest mover. Crosses the road freely, hits every chance spot. Tiny bladder (3 water) but free drinking keeps it going. 1 Grit means it can't stockpile fortifications — fast but fragile. Spreads wide and thin.
+- Identity: Crosses the road freely, hits every chance spot. Tiny bladder (3 water) but free drinking keeps it going. 1 Grit means it can't stockpile fortifications — fast but fragile. Spreads wide and thin.
 
 **The Diplomat** 🦮
 - Bowl: 4 water pegs.
-- Walk: 1d6+2.
+- Walk: 2d6.
 - Modifier Max: Swagger 2, Drive 1, Grit 2, Bond 3.
 - Discount: Ally initiation costs no Bond. Forced ceasefire. Challenges at −1.
 - Identity: Stuck on its side of the road (1 Drive). Plants bond traps everywhere. Relies on allies for protection. Weak alone but makes itself indispensable. Needs the dog park badly.
 
 **The Yapper** 🐩
 - Bowl: 4 water pegs.
-- Walk: 1d6.
+- Walk: 2d6.
 - Modifier Max: Swagger 1, Drive 2, Grit 3, Bond 2.
 - Discount: Fortify costs no Grit. Attackers gain +1 Grit.
 - Identity: 1 Swagger means barely any claims from home. But can challenge (Drive) and re-claim with Grit instead of Swagger. 3 Grit fuels both fortify (free discount) and re-claims. The turtle that bites — takes territory through challenges, then digs in.
@@ -468,7 +470,7 @@ Drive is the most common Chance card outcome — the board's primary drive sourc
 ## 14. Turn Structure
 
 1. **Territory Income.** Collect swagger from territory holdings (+1 per 2–3 connected territories). Desperation bonus if applicable (+2 Grit if fewer than 3 territories).
-2. **Roll and Move.** Roll walk dice. Choose direction. Move along sidewalk. Spend Drive for road crossings, shortcuts, side streets. Pass through triggers: Water Sources, Chance Spots, Dog Park, active Bond Spaces, Events.
+2. **Roll and Move.** Roll 2d6. Choose direction. Move along sidewalk. Spend Drive for road crossings, shortcuts, side streets. Pass through triggers: Water Sources, Chance Spots, Dog Park, active Bond Spaces, Events.
 3. **Action Phase.** At stopping position: Claim, Challenge, Fortify, Ally, Break Alliance, or Pass.
 4. **Home Resupply** (if you passed or landed on Home). Refill water to full. Refill modifiers to archetype max.
 5. **Maintenance.** Housebound check.
@@ -490,7 +492,7 @@ Housebound (0 non-home territories for 2 turns): walk halved, no territory bonus
 ## 16. Components List
 
 - 1 Neighbourhood game board (two sidewalks, road, intersections, side streets, territory spaces, bond spaces, chance spots, water sources, dog park, events space)
-- 4 Dog breed cards (with modifier max, discount, walk dice, strategy tips)
+- 4 Dog breed cards (with modifier max, discount, strategy tips)
 - 4 Dog figurines (player colours)
 - 4 Dog Bowls (unique per archetype, colour-coded, water peg holes around rim, centre dish)
 - Water pegs (blue) — 6 per player
