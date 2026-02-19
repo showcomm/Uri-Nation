@@ -1,0 +1,1681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Uri-Nation — Game Runner</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── Setup Screen ─────────────────────────────────── */
+#setup-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+}
+.setup-panel {
+  background: #16213e;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 32px 40px;
+  width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.setup-panel h1 { font-size: 28px; color: #e8d44d; margin-bottom: 4px; }
+.setup-panel h2 { font-size: 14px; color: #888; font-weight: normal; margin-bottom: 24px; }
+.setup-section { margin-bottom: 20px; }
+.setup-section > label { display: block; font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+.setup-section input[type="file"] { font-size: 13px; color: #ccc; }
+#board-info { font-size: 12px; color: #6a6; margin-top: 6px; min-height: 18px; }
+#board-info.error { color: #c66; }
+.player-count-btns { display: flex; gap: 8px; margin-bottom: 12px; }
+.player-count-btns button {
+  padding: 6px 18px; background: #1a1a2e; border: 1px solid #555; border-radius: 4px;
+  color: #ccc; cursor: pointer; font-size: 13px;
+}
+.player-count-btns button.active { border-color: #4488cc; color: #fff; background: #0f3460; }
+.player-row {
+  display: grid;
+  grid-template-columns: 30px 1fr 1fr 80px;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.player-row .player-dot { width: 18px; height: 18px; border-radius: 50%; }
+.player-row input, .player-row select {
+  padding: 5px 8px; background: #1a1a2e; border: 1px solid #555; border-radius: 4px;
+  color: #fff; font-size: 12px;
+}
+.player-row select { cursor: pointer; }
+.big-btn {
+  display: block; width: 100%; padding: 12px; margin-top: 16px;
+  background: #0f3460; border: 2px solid #4488cc; border-radius: 8px;
+  color: #bbd; font-size: 16px; cursor: pointer; text-transform: uppercase; letter-spacing: 2px;
+}
+.big-btn:hover:not(:disabled) { background: #1a4a80; color: #fff; }
+.big-btn:disabled { opacity: 0.4; cursor: default; }
+
+/* ── Game Screen ──────────────────────────────────── */
+#game-screen {
+  display: none;
+  height: 100vh;
+  grid-template-columns: 240px 1fr 260px;
+  grid-template-rows: 1fr;
+}
+#game-screen.visible { display: grid; }
+
+/* Sidebar */
+#sidebar {
+  background: #16213e;
+  border-right: 1px solid #333;
+  padding: 12px;
+  overflow-y: auto;
+}
+#sidebar h3 {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+  color: #666; margin: 12px 0 6px;
+}
+#sidebar h3:first-child { margin-top: 0; }
+#phase-banner {
+  text-align: center; padding: 4px 12px; font-size: 12px; font-weight: bold;
+  color: #e8d44d; text-transform: uppercase; letter-spacing: 2px; background: #0f3460;
+  border-bottom: 1px solid #333;
+}
+.stat-row { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0; }
+.stat-row .label { color: #999; }
+.stat-row .value { color: #fff; font-weight: bold; min-width: 30px; text-align: right; }
+.stat-water .value { color: #40a0e0; }
+.stat-swagger .value { color: #e8d44d; }
+.stat-drive .value { color: #e07040; }
+.stat-grit .value { color: #a0a0b0; }
+.stat-bond .value { color: #e05080; }
+.player-summary {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 6px; border-radius: 4px; margin-bottom: 4px; font-size: 12px;
+}
+.player-summary.current { background: rgba(255,255,255,0.08); }
+.player-summary .ps-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+.player-summary .ps-name { flex: 1; }
+.player-summary .ps-terr { color: #7ec850; font-weight: bold; }
+
+/* Board area */
+#board-area {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #1a1a2e;
+}
+#board-container {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  position: relative;
+}
+#board-svg { cursor: default; }
+#board-svg .space-rect { cursor: pointer; stroke: rgba(255,255,255,0.15); stroke-width: 1; }
+#board-svg .space-rect:hover { stroke: rgba(255,255,255,0.5); stroke-width: 2; }
+#board-svg .space-label { pointer-events: none; font-family: monospace; font-size: 9px; fill: rgba(255,255,255,0.7); }
+#board-svg .space-type-label { pointer-events: none; font-family: monospace; font-weight: bold; font-size: 11px; fill: #fff; }
+#board-svg .edge-line { stroke: #555; stroke-width: 1.5; stroke-dasharray: 4,3; }
+#board-svg .edge-line.costly { stroke: #e04040; stroke-dasharray: none; stroke-width: 2; }
+#board-svg .edge-cost-label { font-family: monospace; font-size: 9px; fill: #e04040; font-weight: bold; }
+#board-svg .highlight { fill: rgba(0,128,255,0.25); stroke: #0080ff; stroke-width: 2.5; rx: 4; pointer-events: none; }
+#board-svg .highlight-action { fill: rgba(255,200,0,0.2); stroke: #ffc800; stroke-width: 2.5; rx: 4; pointer-events: none; }
+#board-svg .pawn { stroke: #000; stroke-width: 1.5; }
+#board-svg .fortify-dot { fill: #fff; stroke: #333; stroke-width: 0.5; }
+#board-svg .bond-marker { fill: #e05080; stroke: #fff; stroke-width: 0.5; }
+#board-svg .owner-border { fill: none; stroke-width: 3; rx: 3; pointer-events: none; }
+
+/* Controls bar */
+#controls-bar {
+  display: flex; align-items: center; gap: 12px;
+  padding: 8px 16px; background: #0f3460; border-top: 1px solid #333;
+  min-height: 48px; flex-wrap: wrap;
+}
+#controls-bar .ctrl-btn {
+  padding: 5px 14px; background: #16213e; border: 1px solid #4488cc; border-radius: 4px;
+  color: #bbd; font-size: 12px; cursor: pointer;
+}
+#controls-bar .ctrl-btn:hover { background: #1a4a80; color: #fff; }
+#controls-bar .ctrl-btn.warn { border-color: #cc4444; color: #c88; }
+#controls-bar .ctrl-btn.primary { border-color: #44cc88; color: #8dc; }
+#controls-bar .ctrl-info { font-size: 13px; color: #aab; }
+#controls-bar .ctrl-spacer { flex: 1; }
+
+/* Dice */
+#dice-display {
+  display: none;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 100;
+  gap: 12px;
+  align-items: center;
+  pointer-events: none;
+}
+#dice-display.visible { display: flex; }
+.die {
+  width: 48px; height: 48px; background: #fff; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; font-weight: bold; color: #222;
+  box-shadow: 3px 3px 8px rgba(0,0,0,0.5);
+}
+.die-eq { font-size: 20px; color: #fff; }
+.die-total { font-size: 32px; font-weight: bold; color: #e8d44d; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
+
+/* Log panel */
+#log-panel {
+  background: #16213e;
+  border-left: 1px solid #333;
+  display: flex;
+  flex-direction: column;
+}
+#log-panel h3 {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+  color: #666; padding: 12px 12px 6px;
+}
+#game-log {
+  flex: 1; overflow-y: auto; padding: 0 12px 12px; font-size: 12px; font-family: monospace;
+}
+.log-entry { padding: 2px 0; color: #999; border-bottom: 1px solid rgba(255,255,255,0.03); }
+.log-entry.round { color: #e8d44d; font-weight: bold; margin-top: 8px; }
+.log-entry.action { color: #7ec850; }
+.log-entry.challenge { color: #e07040; }
+.log-entry.system { color: #4488cc; }
+
+/* Game over overlay */
+#game-over {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+}
+#game-over.visible { display: flex; }
+#game-over .go-panel {
+  background: #16213e; border: 2px solid #e8d44d; border-radius: 12px;
+  padding: 32px 48px; text-align: center;
+}
+#game-over h2 { font-size: 32px; color: #e8d44d; margin-bottom: 8px; }
+#game-over p { font-size: 16px; color: #ccc; margin-bottom: 24px; }
+</style>
+</head>
+<body>
+
+<!-- ── Setup Screen ──────────────────────────────── -->
+<div id="setup-screen">
+  <div class="setup-panel">
+    <h1>Uri-Nation</h1>
+    <h2>Game Runner</h2>
+
+    <div class="setup-section">
+      <label>Load Board JSON</label>
+      <input type="file" id="board-file" accept=".json" />
+      <div id="board-info"></div>
+    </div>
+
+    <div class="setup-section" id="player-setup" style="display:none">
+      <label>Players</label>
+      <div class="player-count-btns" id="count-btns"></div>
+      <div id="player-configs"></div>
+    </div>
+
+    <button id="btn-start" class="big-btn" disabled>Start Game</button>
+  </div>
+</div>
+
+<!-- ── Game Screen ───────────────────────────────── -->
+<div id="game-screen">
+  <div id="sidebar">
+    <h3>Turn</h3>
+    <div id="turn-info"></div>
+    <h3>Current Player</h3>
+    <div id="current-player-stats"></div>
+    <h3>All Players</h3>
+    <div id="all-players-summary"></div>
+  </div>
+
+  <div id="board-area">
+    <div id="phase-banner">Setup</div>
+    <div id="board-container">
+      <svg id="board-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div id="dice-display">
+        <div class="die" id="die1"></div>
+        <div class="die" id="die2"></div>
+        <span class="die-eq">=</span>
+        <span class="die-total" id="die-total"></span>
+      </div>
+    </div>
+    <div id="controls-bar"></div>
+  </div>
+
+  <div id="log-panel">
+    <h3>Game Log</h3>
+    <div id="game-log"></div>
+  </div>
+</div>
+
+<!-- ── Game Over Overlay ─────────────────────────── -->
+<div id="game-over">
+  <div class="go-panel">
+    <h2 id="go-title"></h2>
+    <p id="go-detail"></p>
+    <button class="big-btn" onclick="location.reload()">New Game</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════
+//  INLINED ENGINE (from tools/engine/)
+//  Copied here so the file works standalone via file:// protocol.
+// ═══════════════════════════════════════════════════════════════════════
+
+const SPACE_TYPES = {
+  SIDEWALK:     'sidewalk',
+  TERRITORY:    'territory',
+  BOND:         'bond',
+  HOME:         'home',
+  WATER_SOURCE: 'waterSource',
+  CHANCE_SPOT:  'chanceSpot',
+  DOG_PARK:     'dogPark',
+  EVENTS:       'events',
+  INTERSECTION: 'intersection',
+  SIDE_STREET:  'sideStreet',
+};
+
+const ARCHETYPES = {
+  bruiser:  { name: 'Bruiser',  water: 6, swagger: 3, drive: 2, grit: 2, bond: 1, discount: 'claimNoSwagger' },
+  scrapper: { name: 'Scrapper', water: 3, swagger: 2, drive: 3, grit: 1, bond: 2, discount: 'drinkNoDrive' },
+  diplomat: { name: 'Diplomat', water: 4, swagger: 2, drive: 1, grit: 2, bond: 3, discount: 'allyNoBond' },
+  yapper:   { name: 'Yapper',  water: 4, swagger: 1, drive: 2, grit: 3, bond: 2, discount: 'fortifyNoGrit' },
+};
+
+const DEFAULTS = {
+  swaggerPerTerritories: 2,
+  gritPenaltyThreshold:  5,
+  maxFortify:            3,
+  homeTurfBonus:         3,
+  maxTurns:              30,
+  territoryWinThreshold: 10,
+  desperationThreshold:  3,
+  desperationGritBonus:  2,
+  houseboundTurns:       2,
+};
+
+function defaultSpaceState() {
+  return { owner: null, fortifyTokens: 0, bondMarkers: [], revertOwner: null, revertIn: 0 };
+}
+
+class Board {
+  constructor() {
+    this.spaces = new Map();
+    this.edges = new Map();
+  }
+  static fromJSON(json) {
+    const b = new Board();
+    for (const s of json.spaces) b.addSpace(s);
+    for (const e of json.edges) b.addEdge(e.from, e.to, e.driveCost || 0);
+    return b;
+  }
+  addSpace(def) {
+    this.spaces.set(def.id, {
+      id: def.id, type: def.type,
+      side: def.side || null, homeOwner: def.homeOwner || null,
+      influence: def.influence || [], label: def.label || def.id,
+      ...defaultSpaceState(),
+    });
+  }
+  addEdge(fromId, toId, driveCost = 0) {
+    if (!this.edges.has(fromId)) this.edges.set(fromId, []);
+    if (!this.edges.has(toId))   this.edges.set(toId, []);
+    this.edges.get(fromId).push({ target: toId, driveCost });
+    this.edges.get(toId).push({ target: fromId, driveCost });
+  }
+  getSpace(id)       { return this.spaces.get(id) || null; }
+  getNeighbors(id)   { return (this.edges.get(id) || []).map(e => ({ space: this.spaces.get(e.target), driveCost: e.driveCost })); }
+  getEdges(id)       { return this.edges.get(id) || []; }
+  getSpacesByType(t) { const o = []; for (const s of this.spaces.values()) if (s.type === t) o.push(s); return o; }
+  getTerritoriesOwnedBy(pid) { const o = []; for (const s of this.spaces.values()) if (s.type === SPACE_TYPES.TERRITORY && s.owner === pid) o.push(s); return o; }
+  getAllSpaces()      { return [...this.spaces.values()]; }
+  getMovementCost(fromId, toId) {
+    const edges = this.edges.get(fromId);
+    if (!edges) return null;
+    const e = edges.find(e => e.target === toId);
+    return e ? e.driveCost : null;
+  }
+  getConnectedTerritoryGroups(pid) {
+    const owned = new Set();
+    for (const s of this.spaces.values()) if (s.type === SPACE_TYPES.TERRITORY && s.owner === pid) owned.add(s.id);
+    const visited = new Set(); const groups = [];
+    for (const id of owned) {
+      if (visited.has(id)) continue;
+      const group = []; const stack = [id];
+      while (stack.length > 0) {
+        const cur = stack.pop();
+        if (visited.has(cur)) continue;
+        visited.add(cur); group.push(cur);
+        for (const e of (this.edges.get(cur) || [])) if (owned.has(e.target) && !visited.has(e.target)) stack.push(e.target);
+      }
+      groups.push(group);
+    }
+    return groups;
+  }
+  isInCluster(tid, pid) {
+    for (const g of this.getConnectedTerritoryGroups(pid)) if (g.includes(tid) && g.length >= 3) return true;
+    return false;
+  }
+  areBondedAt(aId, dId, tid) {
+    for (const s of this.spaces.values()) {
+      if (s.type !== SPACE_TYPES.BOND) continue;
+      if (s.bondMarkers.includes(aId) && s.bondMarkers.includes(dId) && s.influence.includes(tid)) return true;
+    }
+    return false;
+  }
+  resetState() { for (const s of this.spaces.values()) Object.assign(s, defaultSpaceState()); }
+  toJSON() {
+    const spaces = []; for (const s of this.spaces.values()) spaces.push({ ...s });
+    const edges = []; const seen = new Set();
+    for (const [fid, conns] of this.edges) for (const c of conns) {
+      const key = [fid, c.target].sort().join('|');
+      if (seen.has(key)) continue; seen.add(key);
+      edges.push({ from: fid, to: c.target, driveCost: c.driveCost });
+    }
+    return { spaces, edges };
+  }
+}
+
+function createPlayer(id, archetypeKey, homeSpaceId) {
+  const arch = ARCHETYPES[archetypeKey];
+  return {
+    id, archetype: archetypeKey, position: homeSpaceId,
+    water: arch.water, swagger: arch.swagger, drive: arch.drive, grit: arch.grit, bond: arch.bond,
+    zeroTerritoryTurns: 0, housebound: false,
+  };
+}
+
+class Game {
+  constructor(board, players, config = {}) {
+    this.board = board; this.players = players;
+    this.config = { ...DEFAULTS, ...config };
+    this.turnNumber = 0; this.currentPlayerIndex = 0;
+    this.gameOver = false; this.winner = null; this.log = [];
+  }
+  getPlayer(id)        { return this.players.find(p => p.id === id); }
+  getCurrentPlayer()   { return this.players[this.currentPlayerIndex]; }
+  getArchetype(player) { return ARCHETYPES[player.archetype]; }
+  sortTurnOrder() {
+    this.players.sort((a, b) =>
+      this.board.getTerritoriesOwnedBy(a.id).length - this.board.getTerritoriesOwnedBy(b.id).length
+    );
+  }
+  calculateSwaggerIncome(pid) {
+    let total = 0;
+    for (const g of this.board.getConnectedTerritoryGroups(pid)) total += Math.floor(g.length / this.config.swaggerPerTerritories);
+    return total;
+  }
+  applyTerritoryIncome(pid) {
+    const p = this.getPlayer(pid);
+    const sw = this.calculateSwaggerIncome(pid);
+    if (sw > 0) { p.swagger += sw; this._log(pid, `territory income: +${sw} swagger`); }
+    const tc = this.board.getTerritoriesOwnedBy(pid).length;
+    if (tc < this.config.desperationThreshold) {
+      p.grit += this.config.desperationGritBonus;
+      this._log(pid, `desperation: +${this.config.desperationGritBonus} grit`);
+    }
+  }
+
+  // ── Validation ──
+  canClaim(pid, tid) {
+    const p = this.getPlayer(pid), s = this.board.getSpace(tid);
+    if (!s || s.type !== SPACE_TYPES.TERRITORY) return { ok: false, reason: 'Not a territory' };
+    if (s.owner !== null) return { ok: false, reason: 'Occupied' };
+    if (p.water < 2) return { ok: false, reason: 'Need 2 water' };
+    const ns = p.archetype !== 'bruiser';
+    if (ns && p.swagger < 1) return { ok: false, reason: 'Need 1 swagger' };
+    return { ok: true, waterCost: 2, swaggerCost: ns ? 1 : 0 };
+  }
+  canChallenge(pid, tid) {
+    const p = this.getPlayer(pid), s = this.board.getSpace(tid);
+    if (!s || s.type !== SPACE_TYPES.TERRITORY) return { ok: false, reason: 'Not a territory' };
+    if (s.owner === null) return { ok: false, reason: 'Empty — use Claim' };
+    if (s.owner === pid) return { ok: false, reason: 'Own territory' };
+    if (p.water < 2) return { ok: false, reason: 'Need 2 water' };
+    if (p.drive < 1) return { ok: false, reason: 'Need 1 drive' };
+    if (this.board.areBondedAt(pid, s.owner, tid)) return { ok: false, reason: 'Alliance protection' };
+    return { ok: true, waterCost: 2, driveCost: 1 };
+  }
+  canFortify(pid, tid) {
+    const p = this.getPlayer(pid), s = this.board.getSpace(tid);
+    if (!s || s.type !== SPACE_TYPES.TERRITORY) return { ok: false, reason: 'Not a territory' };
+    if (s.owner !== pid) return { ok: false, reason: 'Not yours' };
+    if (s.fortifyTokens >= this.config.maxFortify) return { ok: false, reason: 'Max fortify' };
+    if (p.water < 1) return { ok: false, reason: 'Need 1 water' };
+    const ng = p.archetype !== 'yapper';
+    if (ng && p.grit < 1) return { ok: false, reason: 'Need 1 grit' };
+    return { ok: true, waterCost: 1, gritCost: ng ? 1 : 0 };
+  }
+  canAlly(pid, bsid) {
+    const p = this.getPlayer(pid), s = this.board.getSpace(bsid);
+    if (!s || s.type !== SPACE_TYPES.BOND) return { ok: false, reason: 'Not a bond space' };
+    if (s.bondMarkers.includes(pid)) return { ok: false, reason: 'Already bonded' };
+    if (p.water < 1) return { ok: false, reason: 'Need 1 water' };
+    const nb = p.archetype !== 'diplomat';
+    if (nb && p.bond < 1) return { ok: false, reason: 'Need 1 bond' };
+    return { ok: true, waterCost: 1, bondCost: nb ? 1 : 0 };
+  }
+  canBreakAlliance(pid, bsid) {
+    const p = this.getPlayer(pid), s = this.board.getSpace(bsid);
+    if (!s || s.type !== SPACE_TYPES.BOND) return { ok: false, reason: 'Not a bond space' };
+    if (!s.bondMarkers.includes(pid)) return { ok: false, reason: 'Not bonded here' };
+    if (s.bondMarkers.length < 2) return { ok: false, reason: 'No alliance' };
+    if (p.water < 1) return { ok: false, reason: 'Need 1 water' };
+    if (p.swagger < 1) return { ok: false, reason: 'Need 1 swagger' };
+    return { ok: true, waterCost: 1, swaggerCost: 1 };
+  }
+  canDrink(pid) {
+    const p = this.getPlayer(pid), s = this.board.getSpace(p.position);
+    if (!s || s.type !== SPACE_TYPES.WATER_SOURCE) return { ok: false, reason: 'Not at water source' };
+    const nd = p.archetype !== 'scrapper';
+    if (nd && p.drive < 1) return { ok: false, reason: 'Need 1 drive' };
+    return { ok: true, driveCost: nd ? 1 : 0 };
+  }
+  canReClaim(pid) {
+    const p = this.getPlayer(pid);
+    if (p.swagger >= 1) return { ok: true, resource: 'swagger' };
+    if (p.grit >= 1)    return { ok: true, resource: 'grit' };
+    return { ok: false, reason: 'Need 1 swagger or 1 grit' };
+  }
+
+  // ── Actions ──
+  claim(pid, tid) {
+    const c = this.canClaim(pid, tid); if (!c.ok) return { success: false, reason: c.reason };
+    const p = this.getPlayer(pid), s = this.board.getSpace(tid);
+    p.water -= c.waterCost; p.swagger -= c.swaggerCost; s.owner = pid;
+    this._log(pid, `claimed ${tid}`); return { success: true };
+  }
+  payChallengeCost(pid, tid) {
+    const c = this.canChallenge(pid, tid); if (!c.ok) return { success: false, reason: c.reason };
+    const p = this.getPlayer(pid);
+    p.water -= c.waterCost; p.drive -= c.driveCost;
+    this._log(pid, `paid challenge cost for ${tid}`);
+    return { success: true, defenderId: this.board.getSpace(tid).owner };
+  }
+  resolveChallenge(attackerId, defenderId, tid, attackRoll, defendRoll) {
+    const att = this.getPlayer(attackerId), def = this.getPlayer(defenderId), space = this.board.getSpace(tid);
+    let aT = attackRoll, dT = defendRoll;
+    dT += space.fortifyTokens;
+    if (space.type === SPACE_TYPES.HOME && space.homeOwner === defenderId) dT += this.config.homeTurfBonus;
+    if (att.archetype === 'diplomat') aT -= 1;
+    if (att.grit > this.config.gritPenaltyThreshold) aT -= (att.grit - this.config.gritPenaltyThreshold);
+    const yapperGrit = def.archetype === 'yapper';
+    if (yapperGrit) { att.grit += 1; this._log(attackerId, '+1 grit (challenged yapper)'); }
+    const cluster = this.board.isInCluster(tid, defenderId);
+    let outcome;
+    if (aT > dT) outcome = 'attackerWins';
+    else if (aT === dT) outcome = cluster ? 'defenderWins' : 'tie';
+    else outcome = 'defenderWins';
+    const result = { outcome, attackRoll, defendRoll, attackTotal: aT, defendTotal: dT, fortifyBonus: space.fortifyTokens, clusterRule: cluster, yapperGrit };
+    if (outcome === 'attackerWins') {
+      space.owner = null; space.fortifyTokens = 0;
+      result.canReClaim = this.canReClaim(attackerId);
+      if (space.type === SPACE_TYPES.HOME) result.isHomeTurf = true;
+      this._log(attackerId, `won challenge at ${tid} (${aT} vs ${dT})`);
+    } else if (outcome === 'defenderWins') {
+      att.grit += 1;
+      this._log(attackerId, `lost challenge at ${tid} (+1 grit)`);
+    }
+    return result;
+  }
+  reClaim(pid, tid, useResource) {
+    const p = this.getPlayer(pid), s = this.board.getSpace(tid);
+    if (useResource === 'swagger') { if (p.swagger < 1) return { success: false }; p.swagger -= 1; }
+    else if (useResource === 'grit') { if (p.grit < 1) return { success: false }; p.grit -= 1; }
+    else return { success: false };
+    s.owner = pid;
+    if (s.type === SPACE_TYPES.HOME && s.homeOwner && s.homeOwner !== pid) {
+      s.revertOwner = s.homeOwner; s.revertIn = 1;
+    }
+    this._log(pid, `re-claimed ${tid} with ${useResource}`); return { success: true };
+  }
+  declineReClaim(tid) { this._log(null, `re-claim declined at ${tid}`); return { success: true }; }
+  fortify(pid, tid) {
+    const c = this.canFortify(pid, tid); if (!c.ok) return { success: false, reason: c.reason };
+    const p = this.getPlayer(pid), s = this.board.getSpace(tid);
+    p.water -= c.waterCost; p.grit -= c.gritCost; s.fortifyTokens += 1;
+    this._log(pid, `fortified ${tid} (${s.fortifyTokens}/${this.config.maxFortify})`); return { success: true };
+  }
+  ally(pid, bsid) {
+    const c = this.canAlly(pid, bsid); if (!c.ok) return { success: false, reason: c.reason };
+    const p = this.getPlayer(pid), s = this.board.getSpace(bsid);
+    p.water -= c.waterCost; p.bond -= c.bondCost; s.bondMarkers.push(pid);
+    this._log(pid, `initiated alliance at ${bsid}`); return { success: true };
+  }
+  compulsoryBondJoin(pid, bsid) {
+    const p = this.getPlayer(pid), s = this.board.getSpace(bsid);
+    if (!s || s.type !== SPACE_TYPES.BOND || s.bondMarkers.length === 0 || s.bondMarkers.includes(pid)) return { success: false };
+    if (p.water < 1) return { success: false, reason: 'No water' };
+    p.water -= 1; s.bondMarkers.push(pid);
+    this._log(pid, `compulsory bond join at ${bsid}`); return { success: true };
+  }
+  breakAlliance(pid, bsid) {
+    const c = this.canBreakAlliance(pid, bsid); if (!c.ok) return { success: false, reason: c.reason };
+    const p = this.getPlayer(pid), s = this.board.getSpace(bsid);
+    p.water -= c.waterCost; p.swagger -= c.swaggerCost; s.bondMarkers = [];
+    this._log(pid, `broke alliance at ${bsid}`); return { success: true };
+  }
+  drink(pid, waterGain) {
+    const c = this.canDrink(pid); if (!c.ok) return { success: false, reason: c.reason };
+    const p = this.getPlayer(pid), arch = this.getArchetype(p);
+    p.drive -= c.driveCost; p.water = Math.min(p.water + waterGain, arch.water);
+    this._log(pid, `drank: +${waterGain} water (now ${p.water}/${arch.water})`); return { success: true };
+  }
+
+  // ── Movement ──
+  getPassThroughEffects(spaceId, pid) {
+    const s = this.board.getSpace(spaceId); if (!s) return [];
+    const effects = [];
+    if (s.type === SPACE_TYPES.WATER_SOURCE) effects.push({ type: 'waterSource', optional: true });
+    if (s.type === SPACE_TYPES.CHANCE_SPOT) effects.push({ type: 'chanceCard' });
+    if (s.type === SPACE_TYPES.DOG_PARK) effects.push({ type: 'dogPark' });
+    if (s.type === SPACE_TYPES.EVENTS) effects.push({ type: 'eventsCard' });
+    if (s.type === SPACE_TYPES.BOND && s.bondMarkers.length > 0 && !s.bondMarkers.includes(pid))
+      effects.push({ type: 'compulsoryBond', bondSpaceId: spaceId });
+    if (s.type === SPACE_TYPES.HOME && s.homeOwner === pid)
+      effects.push({ type: 'homeResupply' });
+    return effects;
+  }
+  movePlayer(pid, path) {
+    const p = this.getPlayer(pid);
+    if (path.length === 0) return { success: true, driveCost: 0, effects: [] };
+    if (path[0] !== p.position) return { success: false, reason: 'Path must start at current position' };
+    let totalDrive = 0;
+    for (let i = 1; i < path.length; i++) {
+      const cost = this.board.getMovementCost(path[i-1], path[i]);
+      if (cost === null) return { success: false, reason: `No connection: ${path[i-1]} -> ${path[i]}` };
+      totalDrive += cost;
+    }
+    if (p.drive < totalDrive) return { success: false, reason: `Not enough drive (need ${totalDrive})` };
+    const effects = [];
+    for (let i = 1; i < path.length; i++) {
+      for (const eff of this.getPassThroughEffects(path[i], pid)) effects.push({ ...eff, spaceId: path[i] });
+    }
+    p.drive -= totalDrive; p.position = path[path.length - 1];
+    this._log(pid, `moved to ${p.position} (${totalDrive} drive)`);
+    return { success: true, driveCost: totalDrive, effects };
+  }
+  applyDogPark(pid) { this.getPlayer(pid).bond += 1; this._log(pid, '+1 bond (dog park)'); }
+  applyHomeResupply(pid) {
+    const p = this.getPlayer(pid), arch = this.getArchetype(p);
+    p.water = arch.water;
+    p.swagger = Math.max(p.swagger, arch.swagger);
+    p.drive   = Math.max(p.drive, arch.drive);
+    p.grit    = Math.max(p.grit, arch.grit);
+    p.bond    = Math.max(p.bond, arch.bond);
+    this._log(pid, 'home resupply');
+  }
+
+  // ── Win conditions ──
+  checkWinConditions() {
+    for (const p of this.players) {
+      const c = this.board.getTerritoriesOwnedBy(p.id).length;
+      if (c >= this.config.territoryWinThreshold) {
+        this.gameOver = true; this.winner = p.id;
+        this._log(p.id, `wins — ${c} territories!`);
+        return { gameOver: true, winner: p.id, reason: 'territory threshold' };
+      }
+    }
+    if (this.turnNumber > 0) {
+      const wt = this.players.filter(p => this.board.getTerritoriesOwnedBy(p.id).length > 0);
+      if (wt.length === 1) {
+        this.gameOver = true; this.winner = wt[0].id;
+        return { gameOver: true, winner: wt[0].id, reason: 'last standing' };
+      }
+    }
+    if (this.turnNumber >= this.config.maxTurns) {
+      const ranked = [...this.players].sort((a, b) => {
+        const aT = this.board.getTerritoriesOwnedBy(a.id), bT = this.board.getTerritoriesOwnedBy(b.id);
+        if (bT.length !== aT.length) return bT.length - aT.length;
+        return bT.reduce((s,t) => s+t.fortifyTokens,0) - aT.reduce((s,t) => s+t.fortifyTokens,0);
+      });
+      this.gameOver = true; this.winner = ranked[0].id;
+      return { gameOver: true, winner: ranked[0].id, reason: 'turn limit', rankings: ranked.map(p => p.id) };
+    }
+    return { gameOver: false };
+  }
+
+  // ── Maintenance ──
+  checkHousebound(pid) {
+    const p = this.getPlayer(pid);
+    if (this.board.getTerritoriesOwnedBy(pid).length === 0) {
+      p.zeroTerritoryTurns += 1;
+      if (p.zeroTerritoryTurns >= this.config.houseboundTurns) { p.housebound = true; this._log(pid, 'is housebound'); }
+    } else { p.zeroTerritoryTurns = 0; p.housebound = false; }
+  }
+  processHomeReversions() {
+    for (const s of this.board.getSpacesByType(SPACE_TYPES.HOME)) {
+      if (s.revertIn > 0) {
+        s.revertIn -= 1;
+        if (s.revertIn === 0 && s.revertOwner) {
+          s.owner = s.revertOwner; s.fortifyTokens = 0;
+          this._log(s.revertOwner, `home reverted at ${s.id}`);
+          s.revertOwner = null;
+        }
+      }
+    }
+  }
+
+  // ── Turn management ──
+  startRound() {
+    this.turnNumber += 1; this.sortTurnOrder(); this.currentPlayerIndex = 0;
+    this.processHomeReversions();
+    this._log(null, `=== Round ${this.turnNumber} ===`);
+  }
+  advancePlayer() { this.currentPlayerIndex += 1; return this.currentPlayerIndex < this.players.length; }
+
+  static rollD6() { return Math.floor(Math.random() * 6) + 1; }
+  static roll2D6() { return Game.rollD6() + Game.rollD6(); }
+  rollMovement(pid) {
+    const p = this.getPlayer(pid);
+    let roll = Game.roll2D6();
+    if (p.housebound) roll = Math.floor(roll / 2);
+    return roll;
+  }
+  _log(pid, msg) { this.log.push({ turn: this.turnNumber, player: pid, message: msg }); }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  CONSTANTS & GLOBALS
+// ═══════════════════════════════════════════════════════════════════════
+
+const TYPE_COLOURS = {
+  [SPACE_TYPES.SIDEWALK]:     '#8a8a9a',
+  [SPACE_TYPES.TERRITORY]:    '#5ea040',
+  [SPACE_TYPES.BOND]:         '#c03030',
+  [SPACE_TYPES.HOME]:         '#c8a030',
+  [SPACE_TYPES.WATER_SOURCE]: '#3090c0',
+  [SPACE_TYPES.CHANCE_SPOT]:  '#a060a0',
+  [SPACE_TYPES.DOG_PARK]:     '#30a068',
+  [SPACE_TYPES.EVENTS]:       '#c07030',
+  [SPACE_TYPES.INTERSECTION]: '#707080',
+  [SPACE_TYPES.SIDE_STREET]:  '#a08860',
+};
+const TYPE_ABBREV = {
+  [SPACE_TYPES.SIDEWALK]: 'SW', [SPACE_TYPES.TERRITORY]: 'TR', [SPACE_TYPES.BOND]: 'BO',
+  [SPACE_TYPES.HOME]: 'HM', [SPACE_TYPES.WATER_SOURCE]: 'WS', [SPACE_TYPES.CHANCE_SPOT]: 'CS',
+  [SPACE_TYPES.DOG_PARK]: 'DP', [SPACE_TYPES.EVENTS]: 'EV', [SPACE_TYPES.INTERSECTION]: 'IX',
+  [SPACE_TYPES.SIDE_STREET]: 'SS',
+};
+const PLAYER_COLOURS = ['#e05050', '#5080e0', '#50c050', '#e0a050'];
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const CELL = 64;
+const SPACE_SZ = 52;
+
+let boardData = null;       // raw JSON
+let board = null;           // Board instance
+let game = null;            // Game instance
+let playerConfigs = [];     // { id, name, archetype, isAI, homeSpaceId }
+let positions = {};         // spaceId → { x, y } in SVG coords
+let svgEl = null;
+let layerEdges, layerSpaces, layerOverlay, layerHighlight, layerPawns;
+
+// Interaction promises
+let _resolveSpaceClick = null;
+let _validSpaceIds = null;
+let _resolveControlBtn = null;
+
+// ═══════════════════════════════════════════════════════════════════════
+//  SETUP SCREEN
+// ═══════════════════════════════════════════════════════════════════════
+
+function initSetup() {
+  document.getElementById('board-file').addEventListener('change', onBoardFileChange);
+
+  // Player count buttons
+  const countBtns = document.getElementById('count-btns');
+  for (let n = 2; n <= 4; n++) {
+    const btn = document.createElement('button');
+    btn.textContent = n;
+    btn.dataset.count = n;
+    if (n === 2) btn.classList.add('active');
+    btn.addEventListener('click', () => {
+      countBtns.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      buildPlayerConfigRows(n);
+    });
+    countBtns.appendChild(btn);
+  }
+
+  document.getElementById('btn-start').addEventListener('click', onStartGame);
+}
+
+function onBoardFileChange(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      boardData = JSON.parse(ev.target.result);
+      const homeCount = boardData.spaces.filter(s => s.type === SPACE_TYPES.HOME).length;
+      const info = document.getElementById('board-info');
+      info.textContent = `${boardData.spaces.length} spaces, ${boardData.edges.length} edges, ${homeCount} homes`;
+      info.className = '';
+      document.getElementById('player-setup').style.display = '';
+
+      // Limit player count to available homes
+      const maxPlayers = Math.min(4, homeCount);
+      const countBtns = document.getElementById('count-btns');
+      countBtns.querySelectorAll('button').forEach(b => {
+        const n = parseInt(b.dataset.count);
+        b.disabled = n > maxPlayers;
+        b.classList.remove('active');
+      });
+      // Select first valid count
+      const firstValid = countBtns.querySelector(`button:not(:disabled)`);
+      if (firstValid) { firstValid.classList.add('active'); buildPlayerConfigRows(parseInt(firstValid.dataset.count)); }
+
+      document.getElementById('btn-start').disabled = homeCount < 2;
+    } catch (err) {
+      const info = document.getElementById('board-info');
+      info.textContent = 'Error: ' + err.message;
+      info.className = 'error';
+    }
+  };
+  reader.readAsText(file);
+}
+
+function buildPlayerConfigRows(count) {
+  const container = document.getElementById('player-configs');
+  container.innerHTML = '';
+  const archetypeKeys = Object.keys(ARCHETYPES);
+  for (let i = 0; i < count; i++) {
+    const row = document.createElement('div');
+    row.className = 'player-row';
+    row.innerHTML = `
+      <span class="player-dot" style="background:${PLAYER_COLOURS[i]}"></span>
+      <input type="text" value="Player ${i+1}" data-field="name" />
+      <select data-field="archetype">
+        ${archetypeKeys.map((k, j) => `<option value="${k}" ${j === i % archetypeKeys.length ? 'selected' : ''}>${ARCHETYPES[k].name}</option>`).join('')}
+      </select>
+      <select data-field="control">
+        <option value="human" ${i === 0 ? 'selected' : ''}>Human</option>
+        <option value="ai" ${i > 0 ? 'selected' : ''}>AI</option>
+      </select>
+    `;
+    container.appendChild(row);
+  }
+}
+
+function onStartGame() {
+  if (!boardData) return;
+  const rows = document.querySelectorAll('#player-configs .player-row');
+  const homes = boardData.spaces.filter(s => s.type === SPACE_TYPES.HOME);
+
+  playerConfigs = [];
+  board = Board.fromJSON(boardData);
+
+  for (let i = 0; i < rows.length; i++) {
+    const name = rows[i].querySelector('[data-field="name"]').value.trim() || `Player ${i+1}`;
+    const archetype = rows[i].querySelector('[data-field="archetype"]').value;
+    const isAI = rows[i].querySelector('[data-field="control"]').value === 'ai';
+    const homeId = homes[i].id;
+    const id = `p${i+1}`;
+    playerConfigs.push({ id, name, archetype, isAI, homeSpaceId: homeId, colour: PLAYER_COLOURS[i] });
+
+    // Set homeOwner on the board space
+    const homeSpace = board.getSpace(homeId);
+    if (homeSpace) homeSpace.homeOwner = id;
+  }
+
+  // Build position map from _positions
+  buildPositionMap();
+
+  // Create players
+  const players = playerConfigs.map(c => createPlayer(c.id, c.archetype, c.homeSpaceId));
+  game = new Game(board, players);
+
+  // Switch to game screen
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('game-screen').classList.add('visible');
+
+  // Build SVG
+  buildBoardSVG();
+  updateOverlay();
+  updatePawns();
+  updateSidebar();
+
+  // Start the game loop
+  runGame();
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  POSITION MAP
+// ═══════════════════════════════════════════════════════════════════════
+
+function buildPositionMap() {
+  positions = {};
+  if (boardData._positions && boardData._positions.length > 0) {
+    for (const p of boardData._positions) {
+      positions[p.id] = { x: p.col * CELL + CELL / 2, y: p.row * CELL + CELL / 2 };
+    }
+  } else {
+    // Fallback: arrange in a grid
+    const count = boardData.spaces.length;
+    const cols = Math.ceil(Math.sqrt(count * 1.5));
+    boardData.spaces.forEach((s, i) => {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      positions[s.id] = { x: col * CELL + CELL / 2, y: row * CELL + CELL / 2 };
+    });
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  SVG RENDERER
+// ═══════════════════════════════════════════════════════════════════════
+
+function buildBoardSVG() {
+  svgEl = document.getElementById('board-svg');
+  svgEl.innerHTML = '';
+
+  // Compute viewBox
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const p of Object.values(positions)) {
+    minX = Math.min(minX, p.x); minY = Math.min(minY, p.y);
+    maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y);
+  }
+  const pad = CELL;
+  svgEl.setAttribute('viewBox', `${minX - pad} ${minY - pad} ${maxX - minX + pad * 2} ${maxY - minY + pad * 2}`);
+  svgEl.setAttribute('width', maxX - minX + pad * 2);
+  svgEl.setAttribute('height', maxY - minY + pad * 2);
+
+  // Layers
+  layerEdges     = svgG('edges-layer');
+  layerSpaces    = svgG('spaces-layer');
+  layerOverlay   = svgG('overlay-layer');
+  layerHighlight = svgG('highlight-layer');
+  layerPawns     = svgG('pawns-layer');
+  svgEl.append(layerEdges, layerSpaces, layerOverlay, layerHighlight, layerPawns);
+
+  // Draw edges
+  const seen = new Set();
+  for (const [fid, conns] of board.edges) {
+    for (const c of conns) {
+      const key = [fid, c.target].sort().join('|');
+      if (seen.has(key)) continue; seen.add(key);
+      const p1 = positions[fid], p2 = positions[c.target];
+      if (!p1 || !p2) continue;
+      const line = svgCreate('line', {
+        x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y,
+        class: 'edge-line' + (c.driveCost > 0 ? ' costly' : ''),
+      });
+      layerEdges.appendChild(line);
+      if (c.driveCost > 0) {
+        const mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2;
+        const lbl = svgCreate('text', { x: mx + 6, y: my - 4, class: 'edge-cost-label' });
+        lbl.textContent = c.driveCost;
+        layerEdges.appendChild(lbl);
+      }
+    }
+  }
+
+  // Draw spaces (static rectangles)
+  for (const s of board.getAllSpaces()) {
+    const pos = positions[s.id];
+    if (!pos) continue;
+    const g = svgG();
+    g.dataset.spaceId = s.id;
+
+    const rect = svgCreate('rect', {
+      x: pos.x - SPACE_SZ / 2, y: pos.y - SPACE_SZ / 2,
+      width: SPACE_SZ, height: SPACE_SZ, rx: 4,
+      fill: TYPE_COLOURS[s.type] || '#555',
+      class: 'space-rect',
+    });
+    rect.dataset.spaceId = s.id;
+    g.appendChild(rect);
+
+    // Type abbreviation
+    const abbr = svgCreate('text', {
+      x: pos.x, y: pos.y - 4,
+      'text-anchor': 'middle', 'dominant-baseline': 'middle',
+      class: 'space-type-label',
+    });
+    abbr.textContent = TYPE_ABBREV[s.type] || '??';
+    g.appendChild(abbr);
+
+    // ID label
+    const idLbl = svgCreate('text', {
+      x: pos.x, y: pos.y + 12,
+      'text-anchor': 'middle', 'dominant-baseline': 'middle',
+      class: 'space-label',
+    });
+    const short = s.id.length > 8 ? s.id.slice(0, 8) + '..' : s.id;
+    idLbl.textContent = short;
+    g.appendChild(idLbl);
+
+    layerSpaces.appendChild(g);
+  }
+
+  // Click handler (event delegation)
+  svgEl.addEventListener('click', (e) => {
+    const rect = e.target.closest('[data-space-id]');
+    if (!rect) return;
+    const sid = rect.dataset.spaceId;
+    if (_resolveSpaceClick && _validSpaceIds && _validSpaceIds.includes(sid)) {
+      _resolveSpaceClick(sid);
+      _resolveSpaceClick = null;
+      _validSpaceIds = null;
+    }
+  });
+}
+
+function updateOverlay() {
+  layerOverlay.innerHTML = '';
+  for (const s of board.getAllSpaces()) {
+    const pos = positions[s.id];
+    if (!pos) continue;
+
+    // Ownership border
+    if (s.owner) {
+      const cfg = playerConfigs.find(c => c.id === s.owner);
+      if (cfg) {
+        const ownerRect = svgCreate('rect', {
+          x: pos.x - SPACE_SZ / 2 - 1, y: pos.y - SPACE_SZ / 2 - 1,
+          width: SPACE_SZ + 2, height: SPACE_SZ + 2,
+          stroke: cfg.colour, class: 'owner-border',
+        });
+        layerOverlay.appendChild(ownerRect);
+      }
+    }
+
+    // Fortify tokens (small white dots along the bottom)
+    for (let f = 0; f < s.fortifyTokens; f++) {
+      const fx = pos.x - 10 + f * 10;
+      const fy = pos.y + SPACE_SZ / 2 - 8;
+      const dot = svgCreate('circle', { cx: fx, cy: fy, r: 3.5, class: 'fortify-dot' });
+      layerOverlay.appendChild(dot);
+    }
+
+    // Bond markers (hearts as colored circles along the top)
+    for (let b = 0; b < s.bondMarkers.length; b++) {
+      const cfg = playerConfigs.find(c => c.id === s.bondMarkers[b]);
+      const bx = pos.x - 10 + b * 10;
+      const by = pos.y - SPACE_SZ / 2 + 8;
+      const heart = svgCreate('text', {
+        x: bx, y: by, 'text-anchor': 'middle', 'dominant-baseline': 'middle',
+        fill: cfg ? cfg.colour : '#e05080', 'font-size': '10px',
+        class: 'bond-marker',
+      });
+      heart.textContent = '\u2665'; // ♥
+      layerOverlay.appendChild(heart);
+    }
+  }
+}
+
+function updatePawns() {
+  layerPawns.innerHTML = '';
+  // Group players by position
+  const byPos = {};
+  for (const p of game.players) {
+    if (!byPos[p.position]) byPos[p.position] = [];
+    byPos[p.position].push(p);
+  }
+  const offsets = {
+    1: [[0, 0]],
+    2: [[-8, 0], [8, 0]],
+    3: [[-8, -6], [8, -6], [0, 8]],
+    4: [[-8, -6], [8, -6], [-8, 8], [8, 8]],
+  };
+  for (const [posId, players] of Object.entries(byPos)) {
+    const pos = positions[posId];
+    if (!pos) continue;
+    const offs = offsets[players.length] || offsets[4];
+    for (let i = 0; i < players.length; i++) {
+      const cfg = playerConfigs.find(c => c.id === players[i].id);
+      const ox = offs[i] ? offs[i][0] : 0;
+      const oy = offs[i] ? offs[i][1] : 0;
+      const pawn = svgCreate('circle', {
+        cx: pos.x + ox, cy: pos.y + oy, r: 7,
+        fill: cfg ? cfg.colour : '#fff',
+        class: 'pawn',
+      });
+      layerPawns.appendChild(pawn);
+    }
+  }
+}
+
+function highlightSpaces(ids, cls = 'highlight') {
+  layerHighlight.innerHTML = '';
+  for (const id of ids) {
+    const pos = positions[id];
+    if (!pos) continue;
+    const r = svgCreate('rect', {
+      x: pos.x - SPACE_SZ / 2 - 2, y: pos.y - SPACE_SZ / 2 - 2,
+      width: SPACE_SZ + 4, height: SPACE_SZ + 4,
+      class: cls,
+    });
+    layerHighlight.appendChild(r);
+  }
+}
+function clearHighlights() { layerHighlight.innerHTML = ''; }
+
+// SVG helpers
+function svgCreate(tag, attrs = {}) {
+  const el = document.createElementNS(SVG_NS, tag);
+  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+  return el;
+}
+function svgG(id) {
+  const g = document.createElementNS(SVG_NS, 'g');
+  if (id) g.id = id;
+  return g;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  UI HELPERS
+// ═══════════════════════════════════════════════════════════════════════
+
+function updateSidebar() {
+  if (!game) return;
+  const cp = game.getCurrentPlayer();
+  const cfg = playerConfigs.find(c => c.id === cp.id);
+
+  // Turn info
+  document.getElementById('turn-info').innerHTML = `
+    <div class="stat-row"><span class="label">Round</span><span class="value">${game.turnNumber}</span></div>
+    <div class="stat-row"><span class="label">Max turns</span><span class="value">${game.config.maxTurns}</span></div>
+  `;
+
+  // Current player stats
+  document.getElementById('current-player-stats').innerHTML = `
+    <div class="stat-row" style="color:${cfg.colour};font-weight:bold;font-size:14px">${cfg.name} (${ARCHETYPES[cfg.archetype].name})</div>
+    <div class="stat-row stat-water"><span class="label">Water</span><span class="value">${cp.water} / ${ARCHETYPES[cp.archetype].water}</span></div>
+    <div class="stat-row stat-swagger"><span class="label">Swagger</span><span class="value">${cp.swagger}</span></div>
+    <div class="stat-row stat-drive"><span class="label">Drive</span><span class="value">${cp.drive}</span></div>
+    <div class="stat-row stat-grit"><span class="label">Grit</span><span class="value">${cp.grit}</span></div>
+    <div class="stat-row stat-bond"><span class="label">Bond</span><span class="value">${cp.bond}</span></div>
+    <div class="stat-row"><span class="label">Position</span><span class="value">${cp.position}</span></div>
+    ${cp.housebound ? '<div class="stat-row" style="color:#c44">HOUSEBOUND</div>' : ''}
+  `;
+
+  // All players summary
+  let html = '';
+  for (const p of game.players) {
+    const c = playerConfigs.find(c => c.id === p.id);
+    const terr = board.getTerritoriesOwnedBy(p.id).length;
+    const isCurrent = p.id === cp.id ? ' current' : '';
+    html += `<div class="player-summary${isCurrent}">
+      <span class="ps-dot" style="background:${c.colour}"></span>
+      <span class="ps-name">${c.name}</span>
+      <span class="ps-terr">${terr} T</span>
+    </div>`;
+  }
+  document.getElementById('all-players-summary').innerHTML = html;
+}
+
+function setPhase(text) {
+  document.getElementById('phase-banner').textContent = text;
+}
+
+function addLogEntry(text, cls = '') {
+  const div = document.createElement('div');
+  div.className = 'log-entry' + (cls ? ' ' + cls : '');
+  div.textContent = text;
+  const log = document.getElementById('game-log');
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+
+function showDice(d1, d2, total) {
+  const dd = document.getElementById('dice-display');
+  document.getElementById('die1').textContent = d1;
+  document.getElementById('die2').textContent = d2;
+  document.getElementById('die-total').textContent = total !== null ? total : '';
+  dd.classList.add('visible');
+}
+function hideDice() {
+  document.getElementById('dice-display').classList.remove('visible');
+}
+
+// Controls bar — dynamic buttons
+function setControls(items) {
+  const bar = document.getElementById('controls-bar');
+  bar.innerHTML = '';
+  for (const item of items) {
+    if (item.type === 'info') {
+      const span = document.createElement('span');
+      span.className = 'ctrl-info';
+      span.textContent = item.text;
+      bar.appendChild(span);
+    } else if (item.type === 'spacer') {
+      const span = document.createElement('span');
+      span.className = 'ctrl-spacer';
+      bar.appendChild(span);
+    } else if (item.type === 'button') {
+      const btn = document.createElement('button');
+      btn.className = 'ctrl-btn' + (item.cls ? ' ' + item.cls : '');
+      btn.textContent = item.text;
+      btn.addEventListener('click', () => {
+        if (_resolveControlBtn) { _resolveControlBtn(item.value); _resolveControlBtn = null; }
+      });
+      bar.appendChild(btn);
+    }
+  }
+}
+function clearControls() { document.getElementById('controls-bar').innerHTML = ''; }
+
+// ═══════════════════════════════════════════════════════════════════════
+//  INTERACTION PROMISES
+// ═══════════════════════════════════════════════════════════════════════
+
+function waitForSpaceClick(validIds) {
+  return new Promise((resolve) => {
+    _validSpaceIds = validIds;
+    _resolveSpaceClick = resolve;
+  });
+}
+
+function waitForControl() {
+  return new Promise((resolve) => { _resolveControlBtn = resolve; });
+}
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ═══════════════════════════════════════════════════════════════════════
+//  ACTION HELPERS
+// ═══════════════════════════════════════════════════════════════════════
+
+function getActionableSpaces(player) {
+  const result = [];
+  const currentId = player.position;
+  const neighbors = board.getNeighbors(currentId);
+  const allTargets = [currentId, ...neighbors.map(n => n.space.id)];
+  const seen = new Set();
+
+  for (const tid of allTargets) {
+    if (seen.has(tid)) continue; seen.add(tid);
+    const s = board.getSpace(tid);
+    if (!s) continue;
+    const actions = [];
+
+    if (s.type === SPACE_TYPES.TERRITORY) {
+      if (s.owner === null && game.canClaim(player.id, tid).ok)
+        actions.push({ type: 'claim', targetId: tid, label: `Claim ${s.label}`, cost: 'W:2 Sw:1' });
+      if (s.owner && s.owner !== player.id && game.canChallenge(player.id, tid).ok)
+        actions.push({ type: 'challenge', targetId: tid, label: `Challenge ${s.label}`, cost: 'W:2 Dr:1' });
+      if (s.owner === player.id && game.canFortify(player.id, tid).ok)
+        actions.push({ type: 'fortify', targetId: tid, label: `Fortify ${s.label}`, cost: 'W:1 Gr:1' });
+    }
+    if (s.type === SPACE_TYPES.BOND) {
+      if (game.canAlly(player.id, tid).ok)
+        actions.push({ type: 'ally', targetId: tid, label: `Ally at ${s.label}`, cost: 'W:1 Bd:1' });
+      if (game.canBreakAlliance(player.id, tid).ok)
+        actions.push({ type: 'breakAlliance', targetId: tid, label: `Break alliance ${s.label}`, cost: 'W:1 Sw:1' });
+    }
+    if (s.type === SPACE_TYPES.WATER_SOURCE && tid === currentId && game.canDrink(player.id).ok) {
+      actions.push({ type: 'drink', targetId: tid, label: 'Drink', cost: 'Dr:1' });
+    }
+
+    if (actions.length > 0) result.push({ spaceId: tid, actions });
+  }
+  return result;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  GAME LOOP
+// ═══════════════════════════════════════════════════════════════════════
+
+async function runGame() {
+  await delay(300);
+  while (!game.gameOver) {
+    game.startRound();
+    addLogEntry(`=== Round ${game.turnNumber} ===`, 'round');
+    updateSidebar();
+
+    do {
+      const player = game.getCurrentPlayer();
+      const cfg = getConfig(player.id);
+      addLogEntry(`--- ${cfg.name}'s turn ---`, 'system');
+      updateSidebar();
+
+      // Phase 1: Territory Income
+      setPhase(`${cfg.name} — Income`);
+      game.applyTerritoryIncome(player.id);
+      flushEngineLog();
+      updateSidebar();
+      await delay(cfg.isAI ? 300 : 600);
+
+      // Phase 2: Roll and Move
+      setPhase(`${cfg.name} — Roll`);
+      const d1 = Game.rollD6(), d2 = Game.rollD6();
+      let maxSteps = d1 + d2;
+      if (player.housebound) maxSteps = Math.floor(maxSteps / 2);
+      showDice(d1, d2, maxSteps);
+      addLogEntry(`${cfg.name} rolled ${d1}+${d2} = ${maxSteps}${player.housebound ? ' (housebound)' : ''}`, 'system');
+      await delay(cfg.isAI ? 600 : 1200);
+      hideDice();
+
+      setPhase(`${cfg.name} — Move`);
+      let path;
+      if (cfg.isAI) {
+        path = aiComputePath(player, maxSteps);
+        // Animate AI movement step by step
+        for (let i = 1; i < path.length; i++) {
+          await delay(250);
+          player.position = path[i]; // temp for visual
+          updatePawns();
+        }
+        player.position = path[0]; // reset for movePlayer
+      } else {
+        path = await humanBuildPath(player, maxSteps);
+      }
+
+      const moveResult = game.movePlayer(player.id, path);
+      flushEngineLog();
+      updateOverlay();
+      updatePawns();
+      updateSidebar();
+
+      // Process pass-through effects
+      let passedHome = false;
+      if (moveResult.success && moveResult.effects) {
+        for (const eff of moveResult.effects) {
+          if (eff.type === 'homeResupply') { passedHome = true; continue; }
+          if (eff.type === 'dogPark') {
+            game.applyDogPark(player.id);
+            addLogEntry(`${cfg.name} passed Dog Park: +1 Bond`, 'action');
+            updateSidebar();
+          }
+          if (eff.type === 'compulsoryBond') {
+            const res = game.compulsoryBondJoin(player.id, eff.bondSpaceId);
+            if (res.success) addLogEntry(`${cfg.name} compulsory bond at ${eff.bondSpaceId}`, 'action');
+            updateOverlay(); updateSidebar();
+          }
+          if (eff.type === 'chanceCard') addLogEntry(`${cfg.name} passed Chance Spot (deck not implemented)`, 'system');
+          if (eff.type === 'eventsCard') addLogEntry(`${cfg.name} passed Events (deck not implemented)`, 'system');
+        }
+      }
+
+      // Phase 3: Action
+      setPhase(`${cfg.name} — Action`);
+      if (cfg.isAI) {
+        await aiDoAction(player, cfg);
+      } else {
+        await humanDoAction(player, cfg);
+      }
+      clearControls();
+      updateOverlay(); updatePawns(); updateSidebar();
+
+      // Phase 4: Home Resupply
+      if (passedHome) {
+        game.applyHomeResupply(player.id);
+        addLogEntry(`${cfg.name} resupplied at home`, 'action');
+        updateSidebar();
+      }
+
+      // Phase 5: Maintenance
+      setPhase(`${cfg.name} — Maintenance`);
+      game.checkHousebound(player.id);
+      flushEngineLog();
+      const win = game.checkWinConditions();
+      updateSidebar();
+      if (win.gameOver) break;
+
+      await delay(200);
+    } while (game.advancePlayer());
+  }
+
+  showGameOver();
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  HUMAN INTERACTION
+// ═══════════════════════════════════════════════════════════════════════
+
+async function humanBuildPath(player, maxSteps) {
+  const path = [player.position];
+  let stepsLeft = maxSteps;
+  let accDriveCost = 0;
+
+  while (stepsLeft > 0) {
+    const current = path[path.length - 1];
+    const reachable = board.getNeighbors(current).filter(n =>
+      !path.includes(n.space.id) && (accDriveCost + n.driveCost) <= player.drive
+    );
+    if (reachable.length === 0) break;
+
+    highlightSpaces(reachable.map(n => n.space.id));
+    setControls([
+      { type: 'info', text: `Steps: ${stepsLeft} | Drive: ${player.drive - accDriveCost}` },
+      { type: 'spacer' },
+      { type: 'button', text: 'End Move', value: 'end', cls: 'primary' },
+      path.length > 1 ? { type: 'button', text: 'Undo', value: 'undo', cls: 'warn' } : null,
+    ].filter(Boolean));
+
+    // Wait for either a space click or a control button
+    const result = await Promise.race([
+      waitForSpaceClick(reachable.map(n => n.space.id)).then(id => ({ type: 'space', id })),
+      waitForControl().then(val => ({ type: 'ctrl', val })),
+    ]);
+
+    // Clear stale resolvers
+    _resolveSpaceClick = null; _validSpaceIds = null; _resolveControlBtn = null;
+
+    if (result.type === 'ctrl' && result.val === 'end') break;
+    if (result.type === 'ctrl' && result.val === 'undo') {
+      if (path.length > 1) {
+        const removed = path.pop();
+        const edge = board.getNeighbors(path[path.length - 1]).find(n => n.space.id === removed);
+        if (edge) accDriveCost -= edge.driveCost;
+        stepsLeft += 1;
+        // Visual update
+        player.position = path[path.length - 1];
+        updatePawns();
+      }
+      continue;
+    }
+    if (result.type === 'space') {
+      const edge = reachable.find(n => n.space.id === result.id);
+      if (edge) {
+        path.push(result.id);
+        accDriveCost += edge.driveCost;
+        stepsLeft -= 1;
+        // Visual: move pawn as path builds
+        player.position = result.id;
+        updatePawns();
+      }
+    }
+  }
+
+  clearHighlights();
+  clearControls();
+  // Reset position so movePlayer can set it
+  player.position = path[0];
+  return path;
+}
+
+async function humanDoAction(player, cfg) {
+  const actionable = getActionableSpaces(player);
+  if (actionable.length === 0) {
+    addLogEntry(`${cfg.name} has no available actions — passing.`, 'system');
+    return;
+  }
+
+  // Show actionable spaces and controls
+  const allIds = actionable.map(a => a.spaceId);
+  highlightSpaces(allIds, 'highlight-action');
+
+  while (true) {
+    setControls([
+      { type: 'info', text: 'Click a highlighted space or pass' },
+      { type: 'spacer' },
+      { type: 'button', text: 'Pass', value: 'pass', cls: '' },
+    ]);
+
+    const result = await Promise.race([
+      waitForSpaceClick(allIds).then(id => ({ type: 'space', id })),
+      waitForControl().then(val => ({ type: 'ctrl', val })),
+    ]);
+    _resolveSpaceClick = null; _validSpaceIds = null; _resolveControlBtn = null;
+
+    if (result.type === 'ctrl' && result.val === 'pass') {
+      addLogEntry(`${cfg.name} passes.`, 'system');
+      break;
+    }
+
+    if (result.type === 'space') {
+      const entry = actionable.find(a => a.spaceId === result.id);
+      if (!entry) continue;
+
+      // Show action buttons for this space
+      const btns = entry.actions.map((a, i) => ({
+        type: 'button', text: `${a.label} (${a.cost})`, value: String(i), cls: 'primary',
+      }));
+      btns.push({ type: 'spacer' });
+      btns.push({ type: 'button', text: 'Back', value: 'back', cls: '' });
+      setControls(btns);
+
+      const actionResult = await waitForControl();
+      _resolveControlBtn = null;
+
+      if (actionResult === 'back') continue;
+
+      const actionIdx = parseInt(actionResult);
+      if (isNaN(actionIdx) || !entry.actions[actionIdx]) continue;
+
+      const action = entry.actions[actionIdx];
+      await executeAction(player, cfg, action);
+      break;
+    }
+  }
+
+  clearHighlights();
+}
+
+async function executeAction(player, cfg, action) {
+  switch (action.type) {
+    case 'claim': {
+      game.claim(player.id, action.targetId);
+      addLogEntry(`${cfg.name} claimed ${action.targetId}`, 'action');
+      break;
+    }
+    case 'challenge': {
+      await doChallenge(player, cfg, action.targetId);
+      break;
+    }
+    case 'fortify': {
+      game.fortify(player.id, action.targetId);
+      addLogEntry(`${cfg.name} fortified ${action.targetId}`, 'action');
+      break;
+    }
+    case 'ally': {
+      game.ally(player.id, action.targetId);
+      addLogEntry(`${cfg.name} allied at ${action.targetId}`, 'action');
+      break;
+    }
+    case 'breakAlliance': {
+      game.breakAlliance(player.id, action.targetId);
+      addLogEntry(`${cfg.name} broke alliance at ${action.targetId}`, 'action');
+      break;
+    }
+    case 'drink': {
+      const waterGain = 2; // Fixed until chance deck is implemented
+      game.drink(player.id, waterGain);
+      addLogEntry(`${cfg.name} drank: +${waterGain} water`, 'action');
+      break;
+    }
+  }
+  flushEngineLog();
+  updateOverlay(); updatePawns(); updateSidebar();
+}
+
+async function doChallenge(player, cfg, targetId) {
+  const space = board.getSpace(targetId);
+  const defId = space.owner;
+  const defCfg = getConfig(defId);
+
+  const payResult = game.payChallengeCost(player.id, targetId);
+  if (!payResult.success) {
+    addLogEntry(`Challenge failed: ${payResult.reason}`, 'challenge');
+    return;
+  }
+
+  addLogEntry(`${cfg.name} challenges ${defCfg.name} at ${targetId}!`, 'challenge');
+  updateSidebar();
+  await delay(600);
+
+  let result;
+  do {
+    const aRoll = Game.rollD6(), dRoll = Game.rollD6();
+    showDice(aRoll, dRoll, null);
+    await delay(900);
+    hideDice();
+
+    result = game.resolveChallenge(player.id, defId, targetId, aRoll, dRoll);
+    addLogEntry(
+      `  Attack ${result.attackRoll} → ${result.attackTotal}  vs  Defense ${result.defendRoll} → ${result.defendTotal}` +
+      (result.fortifyBonus ? ` (+${result.fortifyBonus} fortify)` : '') +
+      (result.clusterRule ? ' [cluster]' : ''),
+      'challenge'
+    );
+
+    if (result.outcome === 'tie') {
+      addLogEntry('  Tie! Re-rolling...', 'challenge');
+      await delay(800);
+    }
+  } while (result.outcome === 'tie');
+
+  if (result.outcome === 'attackerWins') {
+    addLogEntry(`  ${cfg.name} wins!`, 'challenge');
+    updateOverlay();
+
+    // Re-claim choice
+    const rc = game.canReClaim(player.id);
+    if (rc.ok) {
+      let useResource;
+      if (cfg.isAI) {
+        useResource = player.swagger >= 1 ? 'swagger' : (player.grit >= 1 ? 'grit' : null);
+      } else {
+        // Show re-claim choice
+        const btns = [];
+        if (player.swagger >= 1) btns.push({ type: 'button', text: 'Re-claim (Swagger)', value: 'swagger', cls: 'primary' });
+        if (player.grit >= 1)    btns.push({ type: 'button', text: 'Re-claim (Grit)', value: 'grit', cls: 'primary' });
+        btns.push({ type: 'spacer' });
+        btns.push({ type: 'button', text: 'Decline', value: 'decline', cls: 'warn' });
+        setControls(btns);
+        useResource = await waitForControl();
+        _resolveControlBtn = null;
+        if (useResource === 'decline') useResource = null;
+      }
+
+      if (useResource) {
+        game.reClaim(player.id, targetId, useResource);
+        addLogEntry(`  ${cfg.name} re-claimed with ${useResource}`, 'action');
+      } else {
+        game.declineReClaim(targetId);
+        addLogEntry(`  ${cfg.name} declined re-claim`, 'system');
+      }
+    } else {
+      game.declineReClaim(targetId);
+      addLogEntry(`  Cannot re-claim (no swagger or grit)`, 'system');
+    }
+  } else {
+    addLogEntry(`  ${defCfg.name} defends!`, 'challenge');
+  }
+
+  flushEngineLog();
+  updateOverlay(); updatePawns(); updateSidebar();
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  AI PLAYER (random actions)
+// ═══════════════════════════════════════════════════════════════════════
+
+function aiComputePath(player, maxSteps) {
+  const path = [player.position];
+  let stepsLeft = maxSteps;
+  let accDriveCost = 0;
+
+  while (stepsLeft > 0) {
+    const current = path[path.length - 1];
+    const reachable = board.getNeighbors(current).filter(n =>
+      !path.includes(n.space.id) && (accDriveCost + n.driveCost) <= player.drive
+    );
+    if (reachable.length === 0) break;
+    // Random chance to stop early (20%)
+    if (path.length > 1 && Math.random() < 0.2) break;
+
+    const pick = reachable[Math.floor(Math.random() * reachable.length)];
+    path.push(pick.space.id);
+    accDriveCost += pick.driveCost;
+    stepsLeft -= 1;
+  }
+  return path;
+}
+
+async function aiDoAction(player, cfg) {
+  await delay(400);
+  const actionable = getActionableSpaces(player);
+  if (actionable.length === 0) {
+    addLogEntry(`${cfg.name} (AI) passes.`, 'system');
+    return;
+  }
+
+  // Collect all actions, pick one randomly (30% chance to pass instead)
+  const allActions = actionable.flatMap(a => a.actions);
+  if (Math.random() < 0.3 || allActions.length === 0) {
+    addLogEntry(`${cfg.name} (AI) passes.`, 'system');
+    return;
+  }
+
+  const action = allActions[Math.floor(Math.random() * allActions.length)];
+  await executeAction(player, cfg, action);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  GAME OVER
+// ═══════════════════════════════════════════════════════════════════════
+
+function showGameOver() {
+  setPhase('Game Over');
+  const winCfg = getConfig(game.winner);
+  document.getElementById('go-title').textContent = `${winCfg.name} Wins!`;
+
+  // Build ranking
+  const ranked = [...game.players].sort((a, b) =>
+    board.getTerritoriesOwnedBy(b.id).length - board.getTerritoriesOwnedBy(a.id).length
+  );
+  const detail = ranked.map((p, i) => {
+    const c = getConfig(p.id);
+    const terr = board.getTerritoriesOwnedBy(p.id).length;
+    return `${i + 1}. ${c.name} (${ARCHETYPES[c.archetype].name}) — ${terr} territories`;
+  }).join('\n');
+  document.getElementById('go-detail').textContent = detail;
+  document.getElementById('go-detail').style.whiteSpace = 'pre-line';
+  document.getElementById('game-over').classList.add('visible');
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  MISC HELPERS
+// ═══════════════════════════════════════════════════════════════════════
+
+function getConfig(playerId) {
+  return playerConfigs.find(c => c.id === playerId);
+}
+
+let lastLogIdx = 0;
+function flushEngineLog() {
+  while (lastLogIdx < game.log.length) {
+    const entry = game.log[lastLogIdx];
+    const prefix = entry.player ? `[${getConfig(entry.player)?.name || entry.player}] ` : '';
+    // Don't re-add entries we already showed via addLogEntry
+    lastLogIdx++;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════════════════
+
+document.addEventListener('DOMContentLoaded', () => {
+  initSetup();
+  buildPlayerConfigRows(2);
+});
+</script>
+</body>
+</html>
