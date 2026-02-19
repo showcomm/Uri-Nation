@@ -2,50 +2,47 @@
 // Grid-based visual editor that exports JSON compatible with Board.fromJSON()
 
 const SPACE_TYPES = {
+  ROAD:         'road',
   SIDEWALK:     'sidewalk',
   TERRITORY:    'territory',
-  BOND:         'bond',
   HOME:         'home',
+  DOG_PARK:     'dogPark',
   WATER_SOURCE: 'waterSource',
   CHANCE_SPOT:  'chanceSpot',
-  DOG_PARK:     'dogPark',
   EVENTS:       'events',
   INTERSECTION: 'intersection',
-  SIDE_STREET:  'sideStreet',
 };
 
 // Colours for each space type
 const TYPE_COLOURS = {
-  [SPACE_TYPES.SIDEWALK]:     '#b0b0b0',
+  [SPACE_TYPES.ROAD]:         '#888888',
+  [SPACE_TYPES.SIDEWALK]:     '#d4b896',
   [SPACE_TYPES.TERRITORY]:    '#7ec850',
-  [SPACE_TYPES.BOND]:         '#e04040',
   [SPACE_TYPES.HOME]:         '#f0c040',
+  [SPACE_TYPES.DOG_PARK]:     '#40c080',
   [SPACE_TYPES.WATER_SOURCE]: '#40a0e0',
   [SPACE_TYPES.CHANCE_SPOT]:  '#d080d0',
-  [SPACE_TYPES.DOG_PARK]:     '#40c080',
   [SPACE_TYPES.EVENTS]:       '#f08040',
-  [SPACE_TYPES.INTERSECTION]: '#808080',
-  [SPACE_TYPES.SIDE_STREET]:  '#c0a070',
+  [SPACE_TYPES.INTERSECTION]: '#aaaaaa',
 };
 
 // Short labels drawn on cells
 const TYPE_LABELS = {
+  [SPACE_TYPES.ROAD]:         'RD',
   [SPACE_TYPES.SIDEWALK]:     'SW',
   [SPACE_TYPES.TERRITORY]:    'TR',
-  [SPACE_TYPES.BOND]:         'BO',
   [SPACE_TYPES.HOME]:         'HM',
-  [SPACE_TYPES.WATER_SOURCE]: 'WS',
-  [SPACE_TYPES.CHANCE_SPOT]:  'CS',
-  [SPACE_TYPES.DOG_PARK]:     'DP',
+  [SPACE_TYPES.DOG_PARK]:     'PK',
+  [SPACE_TYPES.WATER_SOURCE]: 'H2O',
+  [SPACE_TYPES.CHANCE_SPOT]:  'CH',
   [SPACE_TYPES.EVENTS]:       'EV',
   [SPACE_TYPES.INTERSECTION]: 'IX',
-  [SPACE_TYPES.SIDE_STREET]:  'SS',
 };
 
 // ─── State ───────────────────────────────────────────────────────────
 
-let gridCols = 20;
-let gridRows = 12;
+let gridCols = 22;
+let gridRows = 19;
 let cellSize = 48;
 let grid = [];          // 2D array [row][col] → null | space object
 let selectedStamp = null;
@@ -177,17 +174,13 @@ function drawGrid() {
 // ─── Edge cost logic ─────────────────────────────────────────────────
 
 function edgeCost(spaceA, spaceB) {
-  // Side street connections cost 1 drive
-  if (spaceA.type === SPACE_TYPES.SIDE_STREET || spaceB.type === SPACE_TYPES.SIDE_STREET) {
-    return 1;
-  }
-  // Road crossing: north ↔ south, not at intersection
+  // Road crossing: different sides means road between them
   if (spaceA.side && spaceB.side && spaceA.side !== spaceB.side) {
     // Free at intersections
     if (spaceA.type === SPACE_TYPES.INTERSECTION || spaceB.type === SPACE_TYPES.INTERSECTION) {
       return 0;
     }
-    // Mid-block crossing costs 1
+    // Mid-block crossing costs 1 Drive
     return 1;
   }
   return 0;
@@ -197,7 +190,7 @@ function edgeCost(spaceA, spaceB) {
 
 function buildPalette() {
   const palette = document.getElementById('palette');
-  palette.innerHTML = '<h3>Stamps</h3>';
+  palette.innerHTML = '<h3>Components</h3>';
   for (const [key, type] of Object.entries(SPACE_TYPES)) {
     const btn = document.createElement('button');
     btn.className = 'stamp-btn';
@@ -232,7 +225,10 @@ function updateMetadataPanel() {
     return;
   }
   const space = grid[selectedCell.row][selectedCell.col];
-  panel.innerHTML = `
+  const t = space.type;
+
+  // Common fields for all types
+  let html = `
     <h3>Properties</h3>
     <label>ID
       <input type="text" id="meta-id" value="${esc(space.id)}" />
@@ -240,24 +236,64 @@ function updateMetadataPanel() {
     <label>Type
       <input type="text" id="meta-type" value="${esc(space.type)}" disabled />
     </label>
+    <label>Label
+      <input type="text" id="meta-label" value="${esc(space.label || '')}" placeholder="human-readable name" />
+    </label>`;
+
+  // TERRITORY: facing direction
+  if (t === SPACE_TYPES.TERRITORY) {
+    html += `
+    <label>Facing Direction
+      <select id="meta-facing">
+        <option value="" ${!space.facing ? 'selected' : ''}>(none)</option>
+        <option value="north" ${space.facing === 'north' ? 'selected' : ''}>north</option>
+        <option value="south" ${space.facing === 'south' ? 'selected' : ''}>south</option>
+        <option value="east" ${space.facing === 'east' ? 'selected' : ''}>east</option>
+        <option value="west" ${space.facing === 'west' ? 'selected' : ''}>west</option>
+      </select>
+    </label>`;
+  }
+
+  // HOME: player colour + facing direction
+  if (t === SPACE_TYPES.HOME) {
+    html += `
+    <label>Player Colour
+      <select id="meta-playerColour">
+        <option value="" ${!space.playerColour ? 'selected' : ''}>(none)</option>
+        <option value="blue" ${space.playerColour === 'blue' ? 'selected' : ''}>blue</option>
+        <option value="purple" ${space.playerColour === 'purple' ? 'selected' : ''}>purple</option>
+        <option value="orange" ${space.playerColour === 'orange' ? 'selected' : ''}>orange</option>
+        <option value="yellow" ${space.playerColour === 'yellow' ? 'selected' : ''}>yellow</option>
+      </select>
+    </label>
+    <label>Facing Direction
+      <select id="meta-facing">
+        <option value="" ${!space.facing ? 'selected' : ''}>(none)</option>
+        <option value="north" ${space.facing === 'north' ? 'selected' : ''}>north</option>
+        <option value="south" ${space.facing === 'south' ? 'selected' : ''}>south</option>
+        <option value="east" ${space.facing === 'east' ? 'selected' : ''}>east</option>
+        <option value="west" ${space.facing === 'west' ? 'selected' : ''}>west</option>
+      </select>
+    </label>`;
+  }
+
+  // ROAD, SIDEWALK, INTERSECTION: side field
+  if (t === SPACE_TYPES.ROAD || t === SPACE_TYPES.SIDEWALK || t === SPACE_TYPES.INTERSECTION) {
+    html += `
     <label>Side
       <select id="meta-side">
         <option value="" ${!space.side ? 'selected' : ''}>(none)</option>
         <option value="north" ${space.side === 'north' ? 'selected' : ''}>north</option>
         <option value="south" ${space.side === 'south' ? 'selected' : ''}>south</option>
+        <option value="east" ${space.side === 'east' ? 'selected' : ''}>east</option>
+        <option value="west" ${space.side === 'west' ? 'selected' : ''}>west</option>
       </select>
-    </label>
-    <label>Home Owner
-      <input type="text" id="meta-homeOwner" value="${esc(space.homeOwner || '')}" placeholder="player id" />
-    </label>
-    <label>Influence (comma-separated territory ids)
-      <input type="text" id="meta-influence" value="${esc((space.influence || []).join(', '))}" placeholder="t1, t2" />
-    </label>
-    <label>Label
-      <input type="text" id="meta-label" value="${esc(space.label || '')}" placeholder="human-readable name" />
-    </label>
-    <button id="meta-apply" class="action-btn">Apply</button>
-  `;
+    </label>`;
+  }
+
+  html += `<button id="meta-apply" class="action-btn">Apply</button>`;
+
+  panel.innerHTML = html;
   document.getElementById('meta-apply').addEventListener('click', applyMetadata);
 }
 
@@ -282,12 +318,17 @@ function applyMetadata() {
   }
 
   space.id = newId;
-  space.side = document.getElementById('meta-side').value || null;
-  space.homeOwner = document.getElementById('meta-homeOwner').value.trim() || null;
   space.label = document.getElementById('meta-label').value.trim() || space.id;
 
-  const infStr = document.getElementById('meta-influence').value.trim();
-  space.influence = infStr ? infStr.split(',').map(s => s.trim()).filter(Boolean) : [];
+  // Type-specific fields
+  const facingEl = document.getElementById('meta-facing');
+  if (facingEl) space.facing = facingEl.value || null;
+
+  const playerColourEl = document.getElementById('meta-playerColour');
+  if (playerColourEl) space.playerColour = playerColourEl.value || null;
+
+  const sideEl = document.getElementById('meta-side');
+  if (sideEl) space.side = sideEl.value || null;
 
   drawGrid();
   updateMetadataPanel();
@@ -317,9 +358,9 @@ function onCanvasClick(e) {
         id,
         type: selectedStamp,
         side: null,
-        homeOwner: null,
-        influence: [],
         label: id,
+        facing: null,
+        playerColour: null,
       };
     }
     selectedCell = { row, col };
@@ -345,10 +386,10 @@ function exportBoard() {
       spaces.push({
         id: s.id,
         type: s.type,
-        side: s.side,
-        homeOwner: s.homeOwner,
-        influence: s.influence.length > 0 ? s.influence : undefined,
+        side: s.side || undefined,
         label: s.label,
+        facing: s.facing || undefined,
+        playerColour: s.playerColour || undefined,
       });
       posMap.set(s.id, { row: r, col: c });
     }
@@ -415,8 +456,8 @@ function loadBoard() {
 function importBoard(data) {
   // Restore grid dimensions if saved
   if (data._grid) {
-    gridCols = data._grid.cols || 20;
-    gridRows = data._grid.rows || 12;
+    gridCols = data._grid.cols || 22;
+    gridRows = data._grid.rows || 19;
     cellSize = data._grid.cellSize || 48;
     document.getElementById('grid-cols').value = gridCols;
     document.getElementById('grid-rows').value = gridRows;
@@ -440,9 +481,9 @@ function importBoard(data) {
             id: spaceDef.id,
             type: spaceDef.type,
             side: spaceDef.side || null,
-            homeOwner: spaceDef.homeOwner || null,
-            influence: spaceDef.influence || [],
             label: spaceDef.label || spaceDef.id,
+            facing: spaceDef.facing || null,
+            playerColour: spaceDef.playerColour || null,
           };
           const num = parseInt(spaceDef.id.replace(/[^0-9]/g, ''), 10);
           if (!isNaN(num) && num >= idCounter) idCounter = num;
@@ -458,9 +499,9 @@ function importBoard(data) {
         id: spaceDef.id,
         type: spaceDef.type,
         side: spaceDef.side || null,
-        homeOwner: spaceDef.homeOwner || null,
-        influence: spaceDef.influence || [],
         label: spaceDef.label || spaceDef.id,
+        facing: spaceDef.facing || null,
+        playerColour: spaceDef.playerColour || null,
       };
       const num = parseInt(spaceDef.id.replace(/[^0-9]/g, ''), 10);
       if (!isNaN(num) && num >= idCounter) idCounter = num;
@@ -504,8 +545,8 @@ function saveBoardPatched() {
 // ─── Grid resize ─────────────────────────────────────────────────────
 
 function applyGridResize() {
-  const newCols = parseInt(document.getElementById('grid-cols').value, 10) || 20;
-  const newRows = parseInt(document.getElementById('grid-rows').value, 10) || 12;
+  const newCols = parseInt(document.getElementById('grid-cols').value, 10) || 22;
+  const newRows = parseInt(document.getElementById('grid-rows').value, 10) || 19;
   // Preserve existing cells that fit
   const oldGrid = grid;
   const oldRows = gridRows;
