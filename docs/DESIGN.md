@@ -1,7 +1,7 @@
 # Uri-Nation — Game Design Document
 
-**Version:** 1.2.2
-**Date:** 2026-02-18
+**Version:** 1.2.3
+**Date:** 2026-02-19
 
 ---
 
@@ -225,7 +225,7 @@ Actions that place pee disks on the board cost water pegs (the pee) plus modifie
 |--------|----------|----------|--------|
 | **Claim** | Large (2 water) | + 1 swagger | Place on empty territory. |
 | **Challenge** | Large (2 water) | + 1 drive | Place on occupied territory. Roll to clear. |
-| **Re-claim after win** | — | + 1 swagger OR 1 grit | After winning challenge, spend modifier to keep territory. Swagger = confident claim. Grit = dig in defensively. |
+| **Re-claim after win** | — (challenge disk stays) | + 1 swagger OR 1 grit | Challenge disk converts to claim. Swagger = confident claim. Grit = dig in defensively. If neither available, disk returned and territory is empty. |
 | **Fortify** | Small (1 water) | + 1 grit | Add defense to your claimed territory. |
 | **Ally (initiate)** | Small (1 water) | + 1 bond | Place on bond space. Sets the trap. |
 | **Ally (compulsory join)** | Small (from bank) | — (just 1 water) | Passing an active bond space. Involuntary. |
@@ -328,7 +328,7 @@ Both players roll 1d6. **Attacker must roll higher than defender to win.** Ties 
 
 1. Attacker pays: 2 water (large pee disk placed from supply) + 1 Drive token.
 2. Both roll d6. Apply modifiers.
-3. **Attacker wins:** Both large pees destroyed (returned to supply). Fortify tokens removed. Territory empty. Attacker may **re-claim** by spending 1 swagger OR 1 grit.
+3. **Attacker wins:** Defender's large pee disk and all fortify tokens returned to supply. Attacker's challenge disk stays on the territory. Attacker may **re-claim** by spending 1 swagger OR 1 grit to convert the disk into a claim. If neither is available, the disk is returned and the territory is empty.
 4. **Attacker loses:** Attacker's pee destroyed. +1 Grit to attacker.
 5. **Tie (no cluster):** Re-roll.
 6. **Tie (cluster 3+):** Defender wins.

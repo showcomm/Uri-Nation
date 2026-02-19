@@ -243,11 +243,11 @@ Both roll 1d6. **Attacker must roll higher to win.** Ties re-roll (with one exce
 
 ### If You Win
 
-Both large pee disks are returned to the shared supply. All fortify tokens on the space are removed. The territory is now **empty.**
+The defender's large pee disk and all fortify tokens are returned to the shared supply. Your challenge disk stays on the territory.
 
-You may immediately **re-claim** by spending **1 Swagger OR 1 Grit** and placing a new large pee disk from supply. Swagger = confident claim. Grit = dig in defensively. If you have neither (or no water), the territory stays empty for anyone to grab.
+You may immediately **re-claim** by spending **1 Swagger OR 1 Grit**. Your disk is already there — the modifier converts it into your claim. Swagger = confident claim. Grit = dig in defensively. If you have neither, your disk is returned to supply and the territory stays empty for anyone to grab.
 
-**Full conquest costs:** 2 water + 1 Drive + 1 Swagger or Grit (+ 2 more water for the re-claim disk).
+**Full conquest costs:** 2 water + 1 Drive + 1 Swagger or Grit.
 
 ### If You Lose
 
@@ -405,7 +405,7 @@ Agree before game. Once-per-game unless noted.
 |--------|-------|----------|----------|
 | Claim | 2 | + 1 Swagger | Large (from supply) |
 | Challenge | 2 | + 1 Drive | Large (from supply) |
-| Re-claim (after win) | 2 | + 1 Swagger OR 1 Grit | Large (from supply) |
+| Re-claim (after win) | — | + 1 Swagger OR 1 Grit | Challenge disk stays |
 | Fortify | 1 | + 1 Grit | Small (from supply) |
 | Ally (initiate) | 1 | + 1 Bond | Small (from supply) |
 | Ally (compulsory join) | 1 | — | Small (bank provides) |
