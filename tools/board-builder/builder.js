@@ -756,6 +756,31 @@ function exportJSON() {
     }
   }
 
+  // Intersection reachability: walk through road cells to connect intersections
+  // to sidewalks on either side. These edges are driveCost:0 (free crossing).
+  for (var p = 0; p < positions.length; p++) {
+    var pos = positions[p];
+    if (typeOf[pos.id] !== 'intersection') continue;
+    for (var d = 0; d < DIRS.length; d++) {
+      var dr = DIRS[d][0], dc = DIRS[d][1];
+      var cr = pos.row + dr, cc = pos.col + dc;
+      while (cr >= 0 && cr < gridRows && cc >= 0 && cc < gridCols) {
+        var g = grid[cr] && grid[cr][cc];
+        if (!g) break;
+        if (g.comp.type === 'road' || g.comp.type === 'road3') { cr += dr; cc += dc; continue; }
+        var farId = nodeMap[cr+','+cc];
+        if (farId && farId !== pos.id) {
+          var ek = [pos.id, farId].sort().join('|');
+          if (!edgeSeen[ek]) {
+            edgeSeen[ek] = true;
+            edges.push({from:pos.id, to:farId, driveCost:0});
+          }
+        }
+        break;
+      }
+    }
+  }
+
   // Component-level data for round-trip reload
   var compData = [];
   for (var i = 0; i < components.length; i++) {
