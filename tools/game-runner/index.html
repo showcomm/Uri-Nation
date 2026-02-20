@@ -136,7 +136,6 @@ body {
 #board-svg .highlight-action { fill: rgba(255,200,0,0.2); stroke: #ffc800; stroke-width: 2.5; rx: 4; pointer-events: none; }
 #board-svg .pawn { stroke: #000; stroke-width: 1.5; }
 #board-svg .fortify-dot { fill: #fff; stroke: #333; stroke-width: 0.5; }
-#board-svg .bond-marker { fill: #e05080; stroke: #fff; stroke-width: 0.5; }
 #board-svg .owner-border { fill: none; stroke-width: 3; rx: 3; pointer-events: none; }
 
 /* Controls bar */
@@ -281,22 +280,11 @@ body {
 
 <script>
 // ═══════════════════════════════════════════════════════════════════════
-//  INLINED ENGINE (from tools/engine/)
+//  INLINED ENGINE (from tools/engine/ — v1.3.0)
 //  Copied here so the file works standalone via file:// protocol.
 // ═══════════════════════════════════════════════════════════════════════
 
-const SPACE_TYPES = {
-  SIDEWALK:     'sidewalk',
-  TERRITORY:    'territory',
-  BOND:         'bond',
-  HOME:         'home',
-  WATER_SOURCE: 'waterSource',
-  CHANCE_SPOT:  'chanceSpot',
-  DOG_PARK:     'dogPark',
-  EVENTS:       'events',
-  INTERSECTION: 'intersection',
-  SIDE_STREET:  'sideStreet',
-};
+// --- archetypes.js ---
 
 const ARCHETYPES = {
   bruiser:  { name: 'Bruiser',  water: 6, swagger: 3, drive: 2, grit: 2, bond: 1, discount: 'claimNoSwagger' },
@@ -305,20 +293,22 @@ const ARCHETYPES = {
   yapper:   { name: 'Yapper',  water: 4, swagger: 1, drive: 2, grit: 3, bond: 2, discount: 'fortifyNoGrit' },
 };
 
-const DEFAULTS = {
-  swaggerPerTerritories: 2,
-  gritPenaltyThreshold:  5,
-  maxFortify:            3,
-  homeTurfBonus:         3,
-  maxTurns:              30,
-  territoryWinThreshold: 10,
-  desperationThreshold:  3,
-  desperationGritBonus:  2,
-  houseboundTurns:       2,
+// --- board.js ---
+
+const SPACE_TYPES = {
+  SIDEWALK:     'sidewalk',
+  TERRITORY:    'territory',
+  HOME:         'home',
+  WATER_SOURCE: 'waterSource',
+  CHANCE_SPOT:  'chanceSpot',
+  DOG_PARK:     'dogPark',
+  EVENTS:       'events',
+  INTERSECTION: 'intersection',
+  PATH:         'path',
 };
 
 function defaultSpaceState() {
-  return { owner: null, fortifyTokens: 0, bondMarkers: [], revertOwner: null, revertIn: 0 };
+  return { owner: null, fortifyTokens: 0 };
 }
 
 class Board {
@@ -334,9 +324,12 @@ class Board {
   }
   addSpace(def) {
     this.spaces.set(def.id, {
-      id: def.id, type: def.type,
-      side: def.side || null, homeOwner: def.homeOwner || null,
-      influence: def.influence || [], label: def.label || def.id,
+      id:           def.id,
+      type:         def.type,
+      label:        def.label        || def.id,
+      facing:       def.facing       || null,
+      playerColour: def.playerColour || null,
+      pathExit:     def.pathExit     || null,
       ...defaultSpaceState(),
     });
   }
@@ -352,6 +345,28 @@ class Board {
   getSpacesByType(t) { const o = []; for (const s of this.spaces.values()) if (s.type === t) o.push(s); return o; }
   getTerritoriesOwnedBy(pid) { const o = []; for (const s of this.spaces.values()) if (s.type === SPACE_TYPES.TERRITORY && s.owner === pid) o.push(s); return o; }
   getAllSpaces()      { return [...this.spaces.values()]; }
+  getHomeSpace(playerId, players) {
+    const player = players.find(p => p.id === playerId);
+    if (!player) return null;
+    for (const s of this.spaces.values()) {
+      if (s.type === SPACE_TYPES.HOME && s.playerColour === player.colour) return s;
+    }
+    return null;
+  }
+  getHomeNeighbourhood(playerId, players) {
+    const home = this.getHomeSpace(playerId, players);
+    if (!home) return [];
+    return this.getNeighbors(home.id)
+      .filter(n => n.space.type === SPACE_TYPES.TERRITORY)
+      .map(n => n.space);
+  }
+  isHomeNeighbourhood(territoryId, playerId, players) {
+    return this.getHomeNeighbourhood(playerId, players).some(s => s.id === territoryId);
+  }
+  areAllied(playerIdA, playerIdB, players) {
+    const a = players.find(p => p.id === playerIdA);
+    return a ? a.allies.includes(playerIdB) : false;
+  }
   getMovementCost(fromId, toId) {
     const edges = this.edges.get(fromId);
     if (!edges) return null;
@@ -379,13 +394,6 @@ class Board {
     for (const g of this.getConnectedTerritoryGroups(pid)) if (g.includes(tid) && g.length >= 3) return true;
     return false;
   }
-  areBondedAt(aId, dId, tid) {
-    for (const s of this.spaces.values()) {
-      if (s.type !== SPACE_TYPES.BOND) continue;
-      if (s.bondMarkers.includes(aId) && s.bondMarkers.includes(dId) && s.influence.includes(tid)) return true;
-    }
-    return false;
-  }
   resetState() { for (const s of this.spaces.values()) Object.assign(s, defaultSpaceState()); }
   toJSON() {
     const spaces = []; for (const s of this.spaces.values()) spaces.push({ ...s });
@@ -399,12 +407,26 @@ class Board {
   }
 }
 
-function createPlayer(id, archetypeKey, homeSpaceId) {
+// --- game.js ---
+
+const DEFAULTS = {
+  swaggerPerTerritories: 2,
+  gritPenaltyThreshold:  5,
+  maxFortify:            3,
+  maxTurns:              30,
+  territoryWinThreshold: 10,
+  desperationThreshold:  3,
+  desperationGritBonus:  2,
+  houseboundTurns:       2,
+};
+
+function createPlayer(id, archetypeKey, homeSpaceId, colour) {
   const arch = ARCHETYPES[archetypeKey];
+  if (!arch) throw new Error(`Unknown archetype: ${archetypeKey}`);
   return {
-    id, archetype: archetypeKey, position: homeSpaceId,
+    id, colour, archetype: archetypeKey, position: homeSpaceId,
     water: arch.water, swagger: arch.swagger, drive: arch.drive, grit: arch.grit, bond: arch.bond,
-    zeroTerritoryTurns: 0, housebound: false,
+    allies: [], zeroTerritoryTurns: 0, housebound: false,
   };
 }
 
@@ -414,6 +436,7 @@ class Game {
     this.config = { ...DEFAULTS, ...config };
     this.turnNumber = 0; this.currentPlayerIndex = 0;
     this.gameOver = false; this.winner = null; this.log = [];
+    this.pendingAlliances = new Map();
   }
   getPlayer(id)        { return this.players.find(p => p.id === id); }
   getCurrentPlayer()   { return this.players[this.currentPlayerIndex]; }
@@ -451,12 +474,22 @@ class Game {
   }
   canChallenge(pid, tid) {
     const p = this.getPlayer(pid), s = this.board.getSpace(tid);
-    if (!s || s.type !== SPACE_TYPES.TERRITORY) return { ok: false, reason: 'Not a territory' };
+    if (!s) return { ok: false, reason: 'Space not found' };
+    if (s.type === SPACE_TYPES.HOME) return { ok: false, reason: 'Cannot challenge a home turf' };
+    if (s.type !== SPACE_TYPES.TERRITORY) return { ok: false, reason: 'Not a territory' };
     if (s.owner === null) return { ok: false, reason: 'Empty — use Claim' };
     if (s.owner === pid) return { ok: false, reason: 'Own territory' };
     if (p.water < 2) return { ok: false, reason: 'Need 2 water' };
     if (p.drive < 1) return { ok: false, reason: 'Need 1 drive' };
-    if (this.board.areBondedAt(pid, s.owner, tid)) return { ok: false, reason: 'Alliance protection' };
+    if (this.board.areAllied(pid, s.owner, this.players)) return { ok: false, reason: 'Alliance protection' };
+    // Home neighbourhood transitive check
+    if (this.board.isHomeNeighbourhood(tid, s.owner, this.players)) {
+      const defender = this.getPlayer(s.owner);
+      for (const allyId of defender.allies) {
+        if (this.board.areAllied(pid, allyId, this.players))
+          return { ok: false, reason: 'Alliance protection — home neighbourhood' };
+      }
+    }
     return { ok: true, waterCost: 2, driveCost: 1 };
   }
   canFortify(pid, tid) {
@@ -469,20 +502,17 @@ class Game {
     if (ng && p.grit < 1) return { ok: false, reason: 'Need 1 grit' };
     return { ok: true, waterCost: 1, gritCost: ng ? 1 : 0 };
   }
-  canAlly(pid, bsid) {
-    const p = this.getPlayer(pid), s = this.board.getSpace(bsid);
-    if (!s || s.type !== SPACE_TYPES.BOND) return { ok: false, reason: 'Not a bond space' };
-    if (s.bondMarkers.includes(pid)) return { ok: false, reason: 'Already bonded' };
+  canAlly(pid, dogParkSpaceId) {
+    const p = this.getPlayer(pid), s = this.board.getSpace(dogParkSpaceId);
+    if (!s || s.type !== SPACE_TYPES.DOG_PARK) return { ok: false, reason: 'Not a dog park' };
     if (p.water < 1) return { ok: false, reason: 'Need 1 water' };
     const nb = p.archetype !== 'diplomat';
     if (nb && p.bond < 1) return { ok: false, reason: 'Need 1 bond' };
     return { ok: true, waterCost: 1, bondCost: nb ? 1 : 0 };
   }
-  canBreakAlliance(pid, bsid) {
-    const p = this.getPlayer(pid), s = this.board.getSpace(bsid);
-    if (!s || s.type !== SPACE_TYPES.BOND) return { ok: false, reason: 'Not a bond space' };
-    if (!s.bondMarkers.includes(pid)) return { ok: false, reason: 'Not bonded here' };
-    if (s.bondMarkers.length < 2) return { ok: false, reason: 'No alliance' };
+  canBreakAlliance(pid, alliedPlayerId) {
+    const p = this.getPlayer(pid);
+    if (!p.allies.includes(alliedPlayerId)) return { ok: false, reason: 'Not allied' };
     if (p.water < 1) return { ok: false, reason: 'Need 1 water' };
     if (p.swagger < 1) return { ok: false, reason: 'Need 1 swagger' };
     return { ok: true, waterCost: 1, swaggerCost: 1 };
@@ -519,7 +549,6 @@ class Game {
     const att = this.getPlayer(attackerId), def = this.getPlayer(defenderId), space = this.board.getSpace(tid);
     let aT = attackRoll, dT = defendRoll;
     dT += space.fortifyTokens;
-    if (space.type === SPACE_TYPES.HOME && space.homeOwner === defenderId) dT += this.config.homeTurfBonus;
     if (att.archetype === 'diplomat') aT -= 1;
     if (att.grit > this.config.gritPenaltyThreshold) aT -= (att.grit - this.config.gritPenaltyThreshold);
     const yapperGrit = def.archetype === 'yapper';
@@ -533,7 +562,6 @@ class Game {
     if (outcome === 'attackerWins') {
       space.owner = null; space.fortifyTokens = 0;
       result.canReClaim = this.canReClaim(attackerId);
-      if (space.type === SPACE_TYPES.HOME) result.isHomeTurf = true;
       this._log(attackerId, `won challenge at ${tid} (${aT} vs ${dT})`);
     } else if (outcome === 'defenderWins') {
       att.grit += 1;
@@ -547,9 +575,6 @@ class Game {
     else if (useResource === 'grit') { if (p.grit < 1) return { success: false }; p.grit -= 1; }
     else return { success: false };
     s.owner = pid;
-    if (s.type === SPACE_TYPES.HOME && s.homeOwner && s.homeOwner !== pid) {
-      s.revertOwner = s.homeOwner; s.revertIn = 1;
-    }
     this._log(pid, `re-claimed ${tid} with ${useResource}`); return { success: true };
   }
   declineReClaim(tid) { this._log(null, `re-claim declined at ${tid}`); return { success: true }; }
@@ -559,25 +584,68 @@ class Game {
     p.water -= c.waterCost; p.grit -= c.gritCost; s.fortifyTokens += 1;
     this._log(pid, `fortified ${tid} (${s.fortifyTokens}/${this.config.maxFortify})`); return { success: true };
   }
-  ally(pid, bsid) {
-    const c = this.canAlly(pid, bsid); if (!c.ok) return { success: false, reason: c.reason };
-    const p = this.getPlayer(pid), s = this.board.getSpace(bsid);
-    p.water -= c.waterCost; p.bond -= c.bondCost; s.bondMarkers.push(pid);
-    this._log(pid, `initiated alliance at ${bsid}`); return { success: true };
+
+  // ── Alliance ──
+  ally(pid, dogParkSpaceId) {
+    const c = this.canAlly(pid, dogParkSpaceId); if (!c.ok) return { success: false, reason: c.reason };
+    const p = this.getPlayer(pid);
+    p.water -= c.waterCost; p.bond -= c.bondCost;
+    this.pendingAlliances.set(dogParkSpaceId, pid);
+    this._log(pid, `initiated alliance at ${dogParkSpaceId}`); return { success: true };
   }
-  compulsoryBondJoin(pid, bsid) {
-    const p = this.getPlayer(pid), s = this.board.getSpace(bsid);
-    if (!s || s.type !== SPACE_TYPES.BOND || s.bondMarkers.length === 0 || s.bondMarkers.includes(pid)) return { success: false };
+  compulsoryBondJoin(pid, dogParkSpaceId) {
+    const p = this.getPlayer(pid);
+    if (!this.pendingAlliances.has(dogParkSpaceId)) return { success: false, reason: 'No pending alliance' };
+    const initiatorId = this.pendingAlliances.get(dogParkSpaceId);
+    if (initiatorId === pid) return { success: false, reason: 'Cannot join own alliance' };
+    if (p.allies.includes(initiatorId)) return { success: false, reason: 'Already allied' };
     if (p.water < 1) return { success: false, reason: 'No water' };
-    p.water -= 1; s.bondMarkers.push(pid);
-    this._log(pid, `compulsory bond join at ${bsid}`); return { success: true };
+    const initiator = this.getPlayer(initiatorId);
+    p.water -= 1;
+    if (!p.allies.includes(initiatorId)) p.allies.push(initiatorId);
+    if (!initiator.allies.includes(pid)) initiator.allies.push(pid);
+    this.pendingAlliances.delete(dogParkSpaceId);
+    this._log(pid, `joined alliance with ${initiatorId} at ${dogParkSpaceId}`);
+    // Friendship sacrifice: clear claims in each other's home neighbourhood
+    const cleared = [];
+    const joinerHood = this.board.getHomeNeighbourhood(pid, this.players);
+    for (const t of joinerHood) {
+      if (t.owner === initiatorId) {
+        t.owner = null; t.fortifyTokens = 0; cleared.push(t.id);
+        this._log(initiatorId, `claim cleared at ${t.id} (friendship sacrifice)`);
+      }
+    }
+    const initiatorHood = this.board.getHomeNeighbourhood(initiatorId, this.players);
+    for (const t of initiatorHood) {
+      if (t.owner === pid) {
+        t.owner = null; t.fortifyTokens = 0; cleared.push(t.id);
+        this._log(pid, `claim cleared at ${t.id} (friendship sacrifice)`);
+      }
+    }
+    return { success: true, cleared };
   }
-  breakAlliance(pid, bsid) {
-    const c = this.canBreakAlliance(pid, bsid); if (!c.ok) return { success: false, reason: c.reason };
-    const p = this.getPlayer(pid), s = this.board.getSpace(bsid);
-    p.water -= c.waterCost; p.swagger -= c.swaggerCost; s.bondMarkers = [];
-    this._log(pid, `broke alliance at ${bsid}`); return { success: true };
+  breakAlliance(pid, alliedPlayerId) {
+    const c = this.canBreakAlliance(pid, alliedPlayerId); if (!c.ok) return { success: false, reason: c.reason };
+    const p = this.getPlayer(pid), ally = this.getPlayer(alliedPlayerId);
+    p.water -= c.waterCost; p.swagger -= c.swaggerCost;
+    p.allies = p.allies.filter(id => id !== alliedPlayerId);
+    ally.allies = ally.allies.filter(id => id !== pid);
+    this._log(pid, `broke alliance with ${alliedPlayerId}`); return { success: true };
   }
+
+  // ── Shortcut ──
+  takeShortcut(pid, pathEntryId) {
+    const p = this.getPlayer(pid), s = this.board.getSpace(pathEntryId);
+    if (!s || s.type !== SPACE_TYPES.PATH) return { success: false, reason: 'Not a path space' };
+    if (p.position !== pathEntryId) return { success: false, reason: 'Not at path entry' };
+    if (!s.pathExit) return { success: false, reason: 'No exit' };
+    if (p.drive < 1) return { success: false, reason: 'Need 1 drive' };
+    p.drive -= 1; p.position = s.pathExit;
+    this._log(pid, `took shortcut ${pathEntryId} → ${s.pathExit}`);
+    return { success: true, exitSpaceId: s.pathExit };
+  }
+
+  // ── Drink ──
   drink(pid, waterGain) {
     const c = this.canDrink(pid); if (!c.ok) return { success: false, reason: c.reason };
     const p = this.getPlayer(pid), arch = this.getArchetype(p);
@@ -589,14 +657,28 @@ class Game {
   getPassThroughEffects(spaceId, pid) {
     const s = this.board.getSpace(spaceId); if (!s) return [];
     const effects = [];
-    if (s.type === SPACE_TYPES.WATER_SOURCE) effects.push({ type: 'waterSource', optional: true });
-    if (s.type === SPACE_TYPES.CHANCE_SPOT) effects.push({ type: 'chanceCard' });
-    if (s.type === SPACE_TYPES.DOG_PARK) effects.push({ type: 'dogPark' });
-    if (s.type === SPACE_TYPES.EVENTS) effects.push({ type: 'eventsCard' });
-    if (s.type === SPACE_TYPES.BOND && s.bondMarkers.length > 0 && !s.bondMarkers.includes(pid))
-      effects.push({ type: 'compulsoryBond', bondSpaceId: spaceId });
-    if (s.type === SPACE_TYPES.HOME && s.homeOwner === pid)
-      effects.push({ type: 'homeResupply' });
+    switch (s.type) {
+      case SPACE_TYPES.WATER_SOURCE: effects.push({ type: 'waterSource', optional: true }); break;
+      case SPACE_TYPES.CHANCE_SPOT: effects.push({ type: 'chanceCard' }); break;
+      case SPACE_TYPES.DOG_PARK:
+        if (this.pendingAlliances.has(spaceId)) {
+          const initId = this.pendingAlliances.get(spaceId);
+          const player = this.getPlayer(pid);
+          if (initId !== pid && player && !player.allies.includes(initId)) {
+            effects.push({ type: 'compulsoryBond', dogParkSpaceId: spaceId }); break;
+          }
+        }
+        effects.push({ type: 'dogPark' }); break;
+      case SPACE_TYPES.EVENTS: effects.push({ type: 'eventsCard' }); break;
+      case SPACE_TYPES.HOME: {
+        const player = this.getPlayer(pid);
+        if (player && s.playerColour === player.colour) effects.push({ type: 'homeResupply' });
+        break;
+      }
+      case SPACE_TYPES.PATH:
+        if (s.pathExit) effects.push({ type: 'pathEntry', exitSpaceId: s.pathExit });
+        break;
+    }
     return effects;
   }
   movePlayer(pid, path) {
@@ -650,7 +732,9 @@ class Game {
       const ranked = [...this.players].sort((a, b) => {
         const aT = this.board.getTerritoriesOwnedBy(a.id), bT = this.board.getTerritoriesOwnedBy(b.id);
         if (bT.length !== aT.length) return bT.length - aT.length;
-        return bT.reduce((s,t) => s+t.fortifyTokens,0) - aT.reduce((s,t) => s+t.fortifyTokens,0);
+        const aF = aT.reduce((s,t) => s+t.fortifyTokens,0), bF = bT.reduce((s,t) => s+t.fortifyTokens,0);
+        if (bF !== aF) return bF - aF;
+        return b.swagger - a.swagger;
       });
       this.gameOver = true; this.winner = ranked[0].id;
       return { gameOver: true, winner: ranked[0].id, reason: 'turn limit', rankings: ranked.map(p => p.id) };
@@ -666,34 +750,31 @@ class Game {
       if (p.zeroTerritoryTurns >= this.config.houseboundTurns) { p.housebound = true; this._log(pid, 'is housebound'); }
     } else { p.zeroTerritoryTurns = 0; p.housebound = false; }
   }
-  processHomeReversions() {
-    for (const s of this.board.getSpacesByType(SPACE_TYPES.HOME)) {
-      if (s.revertIn > 0) {
-        s.revertIn -= 1;
-        if (s.revertIn === 0 && s.revertOwner) {
-          s.owner = s.revertOwner; s.fortifyTokens = 0;
-          this._log(s.revertOwner, `home reverted at ${s.id}`);
-          s.revertOwner = null;
-        }
-      }
-    }
-  }
 
   // ── Turn management ──
   startRound() {
     this.turnNumber += 1; this.sortTurnOrder(); this.currentPlayerIndex = 0;
-    this.processHomeReversions();
     this._log(null, `=== Round ${this.turnNumber} ===`);
   }
   advancePlayer() { this.currentPlayerIndex += 1; return this.currentPlayerIndex < this.players.length; }
 
-  static rollD6() { return Math.floor(Math.random() * 6) + 1; }
-  static roll2D6() { return Game.rollD6() + Game.rollD6(); }
-  rollMovement(pid) {
+  static rollD6(rng) { if (rng) return rng(1, 6); return Math.floor(Math.random() * 6) + 1; }
+  static roll2D6(rng) { return Game.rollD6(rng) + Game.rollD6(rng); }
+  rollMovement(pid, rng) {
     const p = this.getPlayer(pid);
-    let roll = Game.roll2D6();
+    let roll = Game.roll2D6(rng);
     if (p.housebound) roll = Math.floor(roll / 2);
     return roll;
+  }
+  getState() {
+    return {
+      turnNumber: this.turnNumber, currentPlayerIndex: this.currentPlayerIndex,
+      gameOver: this.gameOver, winner: this.winner,
+      players: this.players.map(p => ({ ...p, allies: [...p.allies] })),
+      board: this.board.toJSON(),
+      pendingAlliances: Object.fromEntries(this.pendingAlliances),
+      log: [...this.log],
+    };
   }
   _log(pid, msg) { this.log.push({ turn: this.turnNumber, player: pid, message: msg }); }
 }
@@ -705,22 +786,22 @@ class Game {
 const TYPE_COLOURS = {
   [SPACE_TYPES.SIDEWALK]:     '#8a8a9a',
   [SPACE_TYPES.TERRITORY]:    '#5ea040',
-  [SPACE_TYPES.BOND]:         '#c03030',
   [SPACE_TYPES.HOME]:         '#c8a030',
   [SPACE_TYPES.WATER_SOURCE]: '#3090c0',
   [SPACE_TYPES.CHANCE_SPOT]:  '#a060a0',
   [SPACE_TYPES.DOG_PARK]:     '#30a068',
   [SPACE_TYPES.EVENTS]:       '#c07030',
   [SPACE_TYPES.INTERSECTION]: '#707080',
-  [SPACE_TYPES.SIDE_STREET]:  '#a08860',
+  [SPACE_TYPES.PATH]:         '#a08860',
 };
 const TYPE_ABBREV = {
-  [SPACE_TYPES.SIDEWALK]: 'SW', [SPACE_TYPES.TERRITORY]: 'TR', [SPACE_TYPES.BOND]: 'BO',
+  [SPACE_TYPES.SIDEWALK]: 'SW', [SPACE_TYPES.TERRITORY]: 'TR',
   [SPACE_TYPES.HOME]: 'HM', [SPACE_TYPES.WATER_SOURCE]: 'WS', [SPACE_TYPES.CHANCE_SPOT]: 'CS',
   [SPACE_TYPES.DOG_PARK]: 'DP', [SPACE_TYPES.EVENTS]: 'EV', [SPACE_TYPES.INTERSECTION]: 'IX',
-  [SPACE_TYPES.SIDE_STREET]: 'SS',
+  [SPACE_TYPES.PATH]: 'PT',
 };
-const PLAYER_COLOURS = ['#e05050', '#5080e0', '#50c050', '#e0a050'];
+const COLOUR_HEX = { blue: '#5080e0', purple: '#9060c0', orange: '#e0a050', yellow: '#e0d050' };
+const COLOUR_ORDER = ['blue', 'purple', 'orange', 'yellow'];
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const CELL = 64;
 const SPACE_SZ = 52;
@@ -728,7 +809,7 @@ const SPACE_SZ = 52;
 let boardData = null;       // raw JSON
 let board = null;           // Board instance
 let game = null;            // Game instance
-let playerConfigs = [];     // { id, name, archetype, isAI, homeSpaceId }
+let playerConfigs = [];     // { id, name, archetype, isAI, homeSpaceId, colour }
 let positions = {};         // spaceId → { x, y } in SVG coords
 let svgEl = null;
 let layerEdges, layerSpaces, layerOverlay, layerHighlight, layerPawns;
@@ -803,10 +884,11 @@ function buildPlayerConfigRows(count) {
   container.innerHTML = '';
   const archetypeKeys = Object.keys(ARCHETYPES);
   for (let i = 0; i < count; i++) {
+    const colour = COLOUR_HEX[COLOUR_ORDER[i]] || '#888';
     const row = document.createElement('div');
     row.className = 'player-row';
     row.innerHTML = `
-      <span class="player-dot" style="background:${PLAYER_COLOURS[i]}"></span>
+      <span class="player-dot" style="background:${colour}"></span>
       <input type="text" value="Player ${i+1}" data-field="name" />
       <select data-field="archetype">
         ${archetypeKeys.map((k, j) => `<option value="${k}" ${j === i % archetypeKeys.length ? 'selected' : ''}>${ARCHETYPES[k].name}</option>`).join('')}
@@ -834,18 +916,17 @@ function onStartGame() {
     const isAI = rows[i].querySelector('[data-field="control"]').value === 'ai';
     const homeId = homes[i].id;
     const id = `p${i+1}`;
-    playerConfigs.push({ id, name, archetype, isAI, homeSpaceId: homeId, colour: PLAYER_COLOURS[i] });
-
-    // Set homeOwner on the board space
+    // Read colour from the home space's playerColour field
     const homeSpace = board.getSpace(homeId);
-    if (homeSpace) homeSpace.homeOwner = id;
+    const colour = (homeSpace && homeSpace.playerColour) || COLOUR_ORDER[i];
+    playerConfigs.push({ id, name, archetype, isAI, homeSpaceId: homeId, colour });
   }
 
   // Build position map from _positions
   buildPositionMap();
 
-  // Create players
-  const players = playerConfigs.map(c => createPlayer(c.id, c.archetype, c.homeSpaceId));
+  // Create players (v1.3.0: pass colour)
+  const players = playerConfigs.map(c => createPlayer(c.id, c.archetype, c.homeSpaceId, c.colour));
   game = new Game(board, players);
 
   // Switch to game screen
@@ -997,7 +1078,7 @@ function updateOverlay() {
         const ownerRect = svgCreate('rect', {
           x: pos.x - SPACE_SZ / 2 - 1, y: pos.y - SPACE_SZ / 2 - 1,
           width: SPACE_SZ + 2, height: SPACE_SZ + 2,
-          stroke: cfg.colour, class: 'owner-border',
+          stroke: COLOUR_HEX[cfg.colour] || cfg.colour, class: 'owner-border',
         });
         layerOverlay.appendChild(ownerRect);
       }
@@ -1011,17 +1092,17 @@ function updateOverlay() {
       layerOverlay.appendChild(dot);
     }
 
-    // Bond markers (hearts as colored circles along the top)
-    for (let b = 0; b < s.bondMarkers.length; b++) {
-      const cfg = playerConfigs.find(c => c.id === s.bondMarkers[b]);
-      const bx = pos.x - 10 + b * 10;
-      const by = pos.y - SPACE_SZ / 2 + 8;
+    // Pending alliance marker at dog parks
+    if (game && s.type === SPACE_TYPES.DOG_PARK && game.pendingAlliances.has(s.id)) {
+      const initId = game.pendingAlliances.get(s.id);
+      const initCfg = playerConfigs.find(c => c.id === initId);
       const heart = svgCreate('text', {
-        x: bx, y: by, 'text-anchor': 'middle', 'dominant-baseline': 'middle',
-        fill: cfg ? cfg.colour : '#e05080', 'font-size': '10px',
-        class: 'bond-marker',
+        x: pos.x, y: pos.y - SPACE_SZ / 2 + 10,
+        'text-anchor': 'middle', 'dominant-baseline': 'middle',
+        fill: initCfg ? (COLOUR_HEX[initCfg.colour] || initCfg.colour) : '#e05080',
+        'font-size': '14px',
       });
-      heart.textContent = '\u2665'; // ♥
+      heart.textContent = '\u2665';
       layerOverlay.appendChild(heart);
     }
   }
@@ -1051,7 +1132,7 @@ function updatePawns() {
       const oy = offs[i] ? offs[i][1] : 0;
       const pawn = svgCreate('circle', {
         cx: pos.x + ox, cy: pos.y + oy, r: 7,
-        fill: cfg ? cfg.colour : '#fff',
+        fill: cfg ? (COLOUR_HEX[cfg.colour] || cfg.colour) : '#fff',
         class: 'pawn',
       });
       layerPawns.appendChild(pawn);
@@ -1094,6 +1175,7 @@ function updateSidebar() {
   if (!game) return;
   const cp = game.getCurrentPlayer();
   const cfg = playerConfigs.find(c => c.id === cp.id);
+  const colHex = COLOUR_HEX[cfg.colour] || cfg.colour;
 
   // Turn info
   document.getElementById('turn-info').innerHTML = `
@@ -1101,14 +1183,25 @@ function updateSidebar() {
     <div class="stat-row"><span class="label">Max turns</span><span class="value">${game.config.maxTurns}</span></div>
   `;
 
+  // Allies list
+  let alliesHtml = '';
+  if (cp.allies.length > 0) {
+    const allyNames = cp.allies.map(aid => {
+      const ac = playerConfigs.find(c => c.id === aid);
+      return ac ? ac.name : aid;
+    }).join(', ');
+    alliesHtml = `<div class="stat-row"><span class="label">Allies</span><span class="value" style="color:#e05080">${allyNames}</span></div>`;
+  }
+
   // Current player stats
   document.getElementById('current-player-stats').innerHTML = `
-    <div class="stat-row" style="color:${cfg.colour};font-weight:bold;font-size:14px">${cfg.name} (${ARCHETYPES[cfg.archetype].name})</div>
+    <div class="stat-row" style="color:${colHex};font-weight:bold;font-size:14px">${cfg.name} (${ARCHETYPES[cfg.archetype].name})</div>
     <div class="stat-row stat-water"><span class="label">Water</span><span class="value">${cp.water} / ${ARCHETYPES[cp.archetype].water}</span></div>
     <div class="stat-row stat-swagger"><span class="label">Swagger</span><span class="value">${cp.swagger}</span></div>
     <div class="stat-row stat-drive"><span class="label">Drive</span><span class="value">${cp.drive}</span></div>
     <div class="stat-row stat-grit"><span class="label">Grit</span><span class="value">${cp.grit}</span></div>
     <div class="stat-row stat-bond"><span class="label">Bond</span><span class="value">${cp.bond}</span></div>
+    ${alliesHtml}
     <div class="stat-row"><span class="label">Position</span><span class="value">${cp.position}</span></div>
     ${cp.housebound ? '<div class="stat-row" style="color:#c44">HOUSEBOUND</div>' : ''}
   `;
@@ -1117,12 +1210,14 @@ function updateSidebar() {
   let html = '';
   for (const p of game.players) {
     const c = playerConfigs.find(c => c.id === p.id);
+    const cHex = COLOUR_HEX[c.colour] || c.colour;
     const terr = board.getTerritoriesOwnedBy(p.id).length;
     const isCurrent = p.id === cp.id ? ' current' : '';
+    const allyDots = p.allies.length > 0 ? ` \u2665${p.allies.length}` : '';
     html += `<div class="player-summary${isCurrent}">
-      <span class="ps-dot" style="background:${c.colour}"></span>
+      <span class="ps-dot" style="background:${cHex}"></span>
       <span class="ps-name">${c.name}</span>
-      <span class="ps-terr">${terr} T</span>
+      <span class="ps-terr">${terr} T${allyDots}</span>
     </div>`;
   }
   document.getElementById('all-players-summary').innerHTML = html;
@@ -1221,11 +1316,8 @@ function getActionableSpaces(player) {
       if (s.owner === player.id && game.canFortify(player.id, tid).ok)
         actions.push({ type: 'fortify', targetId: tid, label: `Fortify ${s.label}`, cost: 'W:1 Gr:1' });
     }
-    if (s.type === SPACE_TYPES.BOND) {
-      if (game.canAlly(player.id, tid).ok)
-        actions.push({ type: 'ally', targetId: tid, label: `Ally at ${s.label}`, cost: 'W:1 Bd:1' });
-      if (game.canBreakAlliance(player.id, tid).ok)
-        actions.push({ type: 'breakAlliance', targetId: tid, label: `Break alliance ${s.label}`, cost: 'W:1 Sw:1' });
+    if (s.type === SPACE_TYPES.DOG_PARK && game.canAlly(player.id, tid).ok) {
+      actions.push({ type: 'ally', targetId: tid, label: `Ally at ${s.label}`, cost: 'W:1 Bd:1' });
     }
     if (s.type === SPACE_TYPES.WATER_SOURCE && tid === currentId && game.canDrink(player.id).ok) {
       actions.push({ type: 'drink', targetId: tid, label: 'Drink', cost: 'Dr:1' });
@@ -1233,6 +1325,26 @@ function getActionableSpaces(player) {
 
     if (actions.length > 0) result.push({ spaceId: tid, actions });
   }
+
+  // PATH shortcut at current position
+  const curSpace = board.getSpace(currentId);
+  if (curSpace && curSpace.type === SPACE_TYPES.PATH && curSpace.pathExit && player.drive >= 1) {
+    let entry = result.find(r => r.spaceId === currentId);
+    if (!entry) { entry = { spaceId: currentId, actions: [] }; result.push(entry); }
+    entry.actions.push({ type: 'shortcut', targetId: currentId, label: `Shortcut \u2192 ${curSpace.pathExit}`, cost: 'Dr:1' });
+  }
+
+  // Break alliance actions (attached to current position)
+  for (const alliedId of player.allies) {
+    if (game.canBreakAlliance(player.id, alliedId).ok) {
+      const allyCfg = playerConfigs.find(c => c.id === alliedId);
+      const allyName = allyCfg ? allyCfg.name : alliedId;
+      let entry = result.find(r => r.spaceId === currentId);
+      if (!entry) { entry = { spaceId: currentId, actions: [] }; result.push(entry); }
+      entry.actions.push({ type: 'breakAlliance', targetId: alliedId, label: `Break alliance with ${allyName}`, cost: 'W:1 Sw:1' });
+    }
+  }
+
   return result;
 }
 
@@ -1302,9 +1414,17 @@ async function runGame() {
             updateSidebar();
           }
           if (eff.type === 'compulsoryBond') {
-            const res = game.compulsoryBondJoin(player.id, eff.bondSpaceId);
-            if (res.success) addLogEntry(`${cfg.name} compulsory bond at ${eff.bondSpaceId}`, 'action');
+            const res = game.compulsoryBondJoin(player.id, eff.dogParkSpaceId);
+            if (res.success) {
+              addLogEntry(`${cfg.name} compulsory bond at ${eff.dogParkSpaceId}`, 'action');
+              if (res.cleared && res.cleared.length > 0) {
+                addLogEntry(`  Friendship sacrifice: cleared ${res.cleared.join(', ')}`, 'action');
+              }
+            }
             updateOverlay(); updateSidebar();
+          }
+          if (eff.type === 'pathEntry') {
+            addLogEntry(`${cfg.name} at path entry (shortcut to ${eff.exitSpaceId} available)`, 'system');
           }
           if (eff.type === 'chanceCard') addLogEntry(`${cfg.name} passed Chance Spot (deck not implemented)`, 'system');
           if (eff.type === 'eventsCard') addLogEntry(`${cfg.name} passed Events (deck not implemented)`, 'system');
@@ -1485,12 +1605,21 @@ async function executeAction(player, cfg, action) {
     }
     case 'ally': {
       game.ally(player.id, action.targetId);
-      addLogEntry(`${cfg.name} allied at ${action.targetId}`, 'action');
+      addLogEntry(`${cfg.name} initiated alliance at ${action.targetId}`, 'action');
       break;
     }
     case 'breakAlliance': {
+      const allyCfg = getConfig(action.targetId);
+      const allyName = allyCfg ? allyCfg.name : action.targetId;
       game.breakAlliance(player.id, action.targetId);
-      addLogEntry(`${cfg.name} broke alliance at ${action.targetId}`, 'action');
+      addLogEntry(`${cfg.name} broke alliance with ${allyName}`, 'action');
+      break;
+    }
+    case 'shortcut': {
+      const res = game.takeShortcut(player.id, action.targetId);
+      if (res.success) {
+        addLogEntry(`${cfg.name} took shortcut \u2192 ${res.exitSpaceId}`, 'action');
+      }
       break;
     }
     case 'drink': {
@@ -1528,7 +1657,7 @@ async function doChallenge(player, cfg, targetId) {
 
     result = game.resolveChallenge(player.id, defId, targetId, aRoll, dRoll);
     addLogEntry(
-      `  Attack ${result.attackRoll} → ${result.attackTotal}  vs  Defense ${result.defendRoll} → ${result.defendTotal}` +
+      `  Attack ${result.attackRoll} \u2192 ${result.attackTotal}  vs  Defense ${result.defendRoll} \u2192 ${result.defendTotal}` +
       (result.fortifyBonus ? ` (+${result.fortifyBonus} fortify)` : '') +
       (result.clusterRule ? ' [cluster]' : ''),
       'challenge'
@@ -1643,7 +1772,7 @@ function showGameOver() {
   const detail = ranked.map((p, i) => {
     const c = getConfig(p.id);
     const terr = board.getTerritoriesOwnedBy(p.id).length;
-    return `${i + 1}. ${c.name} (${ARCHETYPES[c.archetype].name}) — ${terr} territories`;
+    return `${i + 1}. ${c.name} (${ARCHETYPES[c.archetype].name}) \u2014 ${terr} territories`;
   }).join('\n');
   document.getElementById('go-detail').textContent = detail;
   document.getElementById('go-detail').style.whiteSpace = 'pre-line';
@@ -1663,7 +1792,6 @@ function flushEngineLog() {
   while (lastLogIdx < game.log.length) {
     const entry = game.log[lastLogIdx];
     const prefix = entry.player ? `[${getConfig(entry.player)?.name || entry.player}] ` : '';
-    // Don't re-add entries we already showed via addLogEntry
     lastLogIdx++;
   }
 }
