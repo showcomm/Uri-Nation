@@ -95,6 +95,33 @@ var DEFS = {
     ],
     colors: {main:'#c8a878'},
     swatch: '#c8a878'
+  },
+  sidewalk3: {
+    name: 'Sidewalk 3',
+    footprints: [
+      [{dr:0,dc:0,sub:'main'},{dr:0,dc:1,sub:'main'},{dr:0,dc:2,sub:'main'}],   // H
+      [{dr:0,dc:0,sub:'main'},{dr:1,dc:0,sub:'main'},{dr:2,dc:0,sub:'main'}]    // V
+    ],
+    colors: {main:'#d4b896'},
+    swatch: '#d4b896'
+  },
+  road3: {
+    name: 'Road 3',
+    footprints: [
+      [{dr:0,dc:0,sub:'main'},{dr:1,dc:0,sub:'main'},{dr:2,dc:0,sub:'main'}],   // V
+      [{dr:0,dc:0,sub:'main'},{dr:0,dc:1,sub:'main'},{dr:0,dc:2,sub:'main'}]    // H
+    ],
+    colors: {main:'#888888'},
+    swatch: '#888888'
+  },
+  pathStraight3: {
+    name: 'Path Straight 3',
+    footprints: [
+      [{dr:0,dc:0,sub:'main'},{dr:0,dc:1,sub:'main'},{dr:0,dc:2,sub:'main'}],   // H
+      [{dr:0,dc:0,sub:'main'},{dr:1,dc:0,sub:'main'},{dr:2,dc:0,sub:'main'}]    // V
+    ],
+    colors: {main:'#c8a878'},
+    swatch: '#c8a878'
   }
 };
 
@@ -441,6 +468,24 @@ function onMouseDown(e) {
   var p = cellFromEvent(e);
   mouseDownPos = {x: e.clientX, y: e.clientY};
 
+  // If a stamp is active but user clicked on an existing component, deactivate
+  // the stamp and select that component instead (prevents accidental duplicates).
+  if (activeStamp) {
+    var c = compAt(p.row, p.col);
+    if (c) {
+      activeStamp = null;
+      activeRot = 0;
+      refreshPalette();
+      updateRotLabel();
+      selected = c;
+      dragging = {comp:c, origRow:c.row, origCol:c.col, offR:p.row-c.row, offC:p.col-c.col};
+      dragStarted = false;
+      updateProps();
+      draw();
+      return;
+    }
+  }
+
   // With no active stamp, clicking a component selects and prepares drag
   if (!activeStamp) {
     var c = compAt(p.row, p.col);
@@ -460,7 +505,7 @@ function onMouseUp(e) {
   // Finalise drag
   if (dragging && dragStarted) {
     var nr = p.row - dragging.offR, nc = p.col - dragging.offC;
-    if (canPlace(dragging.comp.type, dragging.comp.rotation, nr, nc, null)) {
+    if (canPlace(dragging.comp.type, dragging.comp.rotation, nr, nc, dragging.comp)) {
       dragging.comp.row = nr;
       dragging.comp.col = nc;
     } else {
@@ -519,6 +564,7 @@ function onKeyDown(e) {
   }
 
   if ((e.key === 'Delete' || e.key === 'Backspace') && !inField) {
+    e.preventDefault();
     if (selected) {
       deleteComp(selected);
       selected = null;
@@ -555,7 +601,7 @@ function exportJSON() {
     var cells = fp(comp.type, comp.rotation);
 
     // Roads are barriers, not nodes
-    if (comp.type === 'road') continue;
+    if (comp.type === 'road' || comp.type === 'road3') continue;
 
     if (comp.type === 'territory' || comp.type === 'home') {
       // Only yard cells become space nodes
@@ -576,16 +622,25 @@ function exportJSON() {
         yi++;
       }
 
-    } else if (comp.type === 'pathStraight') {
-      var c0 = {r:comp.row+cells[0].dr, c:comp.col+cells[0].dc};
-      var c1 = {r:comp.row+cells[1].dr, c:comp.col+cells[1].dc};
+    } else if (comp.type === 'pathStraight' || comp.type === 'pathStraight3') {
+      // 2-cell and 3-cell paths both produce 2 endpoint nodes with driveCost:1.
+      // For 3-cell, the middle cell maps to the entry node for adjacency.
+      var first = cells[0], last = cells[cells.length - 1];
+      var c0 = {r:comp.row+first.dr, c:comp.col+first.dc};
+      var cN = {r:comp.row+last.dr,  c:comp.col+last.dc};
       var eid = comp.id+'_entry', xid = comp.id+'_exit';
       spaces.push({id:eid, type:'sideStreet'});
       spaces.push({id:xid, type:'sideStreet'});
       nodeMap[c0.r+','+c0.c] = eid;
-      nodeMap[c1.r+','+c1.c] = xid;
+      nodeMap[cN.r+','+cN.c] = xid;
       positions.push({id:eid, row:c0.r, col:c0.c});
-      positions.push({id:xid, row:c1.r, col:c1.c});
+      positions.push({id:xid, row:cN.r, col:cN.c});
+      // Map interior cells to entry node so adjacent things connect to the path
+      for (var j = 1; j < cells.length - 1; j++) {
+        var mr = comp.row+cells[j].dr, mc = comp.col+cells[j].dc;
+        nodeMap[mr+','+mc] = eid;
+        positions.push({id:eid, row:mr, col:mc});
+      }
       edges.push({from:eid, to:xid, driveCost:1});
 
     } else if (comp.type === 'pathCorner') {
@@ -600,6 +655,22 @@ function exportJSON() {
       positions.push({id:eid, row:er, col:ec});
       positions.push({id:xid, row:xr, col:xc});
       edges.push({from:eid, to:xid, driveCost:1});
+
+    } else if (comp.type === 'sidewalk3') {
+      // 3-cell sidewalk → 2 endpoint nodes (same movement cost as 2-cell).
+      // Middle cell maps to first node for adjacency.
+      var c0 = {r:comp.row+cells[0].dr, c:comp.col+cells[0].dc};
+      var cm = {r:comp.row+cells[1].dr, c:comp.col+cells[1].dc};
+      var c2 = {r:comp.row+cells[2].dr, c:comp.col+cells[2].dc};
+      var nid0 = comp.id+'_0', nid1 = comp.id+'_1';
+      spaces.push({id:nid0, type:'sidewalk'});
+      spaces.push({id:nid1, type:'sidewalk'});
+      nodeMap[c0.r+','+c0.c] = nid0;
+      nodeMap[cm.r+','+cm.c] = nid0;
+      nodeMap[c2.r+','+c2.c] = nid1;
+      positions.push({id:nid0, row:c0.r, col:c0.c});
+      positions.push({id:nid0, row:cm.r, col:cm.c});
+      positions.push({id:nid1, row:c2.r, col:c2.c});
 
     } else {
       // sidewalk, intersection, dogPark, waterPark — each cell is a node
@@ -640,7 +711,7 @@ function exportJSON() {
     for (var d = 0; d < DIRS.length; d++) {
       var nk = (pos.row+DIRS[d][0])+','+(pos.col+DIRS[d][1]);
       var nid = nodeMap[nk];
-      if (!nid) continue;
+      if (!nid || nid === pos.id) continue;
       var nnt = typeOf[nid];
       if (allowed.indexOf(nnt) < 0) continue;
       var ek = [pos.id, nid].sort().join('|');
@@ -661,7 +732,7 @@ function exportJSON() {
       while (cr >= 0 && cr < gridRows && cc >= 0 && cc < gridCols) {
         var g = grid[cr] && grid[cr][cc];
         if (!g) break;
-        if (g.comp.type === 'road') { crossed = true; cr += dr; cc += dc; }
+        if (g.comp.type === 'road' || g.comp.type === 'road3') { crossed = true; cr += dr; cc += dc; }
         else if (g.comp.type === 'intersection') { crossed = false; break; }
         else break;
       }
@@ -803,15 +874,30 @@ function init() {
   canvas.addEventListener('mouseup', onMouseUp);
   canvas.addEventListener('mouseleave', function() {
     hoverR = -1; hoverC = -1;
-    if (dragging && dragStarted) {
-      dragging.comp.row = dragging.origRow;
-      dragging.comp.col = dragging.origCol;
-      placeOnGrid(dragging.comp);
+    if (dragging) {
+      if (dragStarted) {
+        dragging.comp.row = dragging.origRow;
+        dragging.comp.col = dragging.origCol;
+        placeOnGrid(dragging.comp);
+      }
       dragging = null; dragStarted = false;
     }
+    mouseDownPos = null;
     draw();
   });
 
+  document.addEventListener('mouseup', function(e) {
+    if (!dragging) return;
+    // Canvas mouseup already handled it — dragging would be null
+    // This only fires for releases outside the canvas
+    if (dragStarted) {
+      dragging.comp.row = dragging.origRow;
+      dragging.comp.col = dragging.origCol;
+      placeOnGrid(dragging.comp);
+    }
+    dragging = null; dragStarted = false; mouseDownPos = null;
+    draw();
+  });
   document.addEventListener('keydown', onKeyDown);
   document.getElementById('btn-save').addEventListener('click', saveJSON);
   document.getElementById('btn-load').addEventListener('click', loadJSON);
