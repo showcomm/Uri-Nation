@@ -1,590 +1,823 @@
 // Uri-Nation Board Builder
-// Grid-based visual editor that exports JSON compatible with Board.fromJSON()
+// Grid-based stamp editor. Exports JSON compatible with Board.fromJSON().
 
-const SPACE_TYPES = {
-  ROAD:         'road',
-  SIDEWALK:     'sidewalk',
-  TERRITORY:    'territory',
-  HOME:         'home',
-  DOG_PARK:     'dogPark',
-  WATER_SOURCE: 'waterSource',
-  CHANCE_SPOT:  'chanceSpot',
-  EVENTS:       'events',
-  INTERSECTION: 'intersection',
+// ─── Component Definitions ──────────────────────────────────────────
+
+var CELL = 40; // pixels per grid unit
+
+// Territory / Home turf share identical footprint geometry.
+// Yard is the 2×1 front row; house is the 2×2 back block.
+var COMPOUND_FP = [
+  // rot 0  N — yard on top
+  [{dr:0,dc:0,sub:'yard'},{dr:0,dc:1,sub:'yard'},
+   {dr:1,dc:0,sub:'house'},{dr:1,dc:1,sub:'house'},
+   {dr:2,dc:0,sub:'house'},{dr:2,dc:1,sub:'house'}],
+  // rot 1  E — yard on right
+  [{dr:0,dc:0,sub:'house'},{dr:0,dc:1,sub:'house'},{dr:0,dc:2,sub:'yard'},
+   {dr:1,dc:0,sub:'house'},{dr:1,dc:1,sub:'house'},{dr:1,dc:2,sub:'yard'}],
+  // rot 2  S — yard on bottom
+  [{dr:0,dc:0,sub:'house'},{dr:0,dc:1,sub:'house'},
+   {dr:1,dc:0,sub:'house'},{dr:1,dc:1,sub:'house'},
+   {dr:2,dc:0,sub:'yard'},{dr:2,dc:1,sub:'yard'}],
+  // rot 3  W — yard on left
+  [{dr:0,dc:0,sub:'yard'},{dr:0,dc:1,sub:'house'},{dr:0,dc:2,sub:'house'},
+   {dr:1,dc:0,sub:'yard'},{dr:1,dc:1,sub:'house'},{dr:1,dc:2,sub:'house'}]
+];
+
+var FACING = ['N','E','S','W'];
+var FACING_FULL = ['north','east','south','west'];
+
+var DEFS = {
+  sidewalk: {
+    name: 'Sidewalk',
+    footprints: [
+      [{dr:0,dc:0,sub:'main'},{dr:0,dc:1,sub:'main'}],   // H
+      [{dr:0,dc:0,sub:'main'},{dr:1,dc:0,sub:'main'}]    // V
+    ],
+    colors: {main:'#d4b896'},
+    swatch: '#d4b896'
+  },
+  road: {
+    name: 'Road',
+    footprints: [
+      [{dr:0,dc:0,sub:'main'},{dr:1,dc:0,sub:'main'}],   // V
+      [{dr:0,dc:0,sub:'main'},{dr:0,dc:1,sub:'main'}]    // H
+    ],
+    colors: {main:'#888888'},
+    swatch: '#888888'
+  },
+  intersection: {
+    name: 'Intersection',
+    footprints: [[{dr:0,dc:0,sub:'main'}]],
+    colors: {main:'#aaaaaa'},
+    swatch: '#aaaaaa'
+  },
+  territory: {
+    name: 'Territory',
+    footprints: COMPOUND_FP,
+    colors: {yard:'#7ec850', house:'#c87850'},
+    swatch: '#7ec850'
+  },
+  home: {
+    name: 'Home Turf',
+    footprints: COMPOUND_FP,
+    colors: {yard:'#88aaff', house:'#4477dd'},
+    swatch: '#4477dd'
+  },
+  dogPark: {
+    name: 'Dog Park',
+    footprints: [[{dr:0,dc:0,sub:'main'}]],
+    colors: {main:'#40c080'},
+    swatch: '#40c080'
+  },
+  waterPark: {
+    name: 'Water Park',
+    footprints: [[{dr:0,dc:0,sub:'main'}]],
+    colors: {main:'#40a8a0'},
+    swatch: '#40a8a0'
+  },
+  pathStraight: {
+    name: 'Path Straight',
+    footprints: [
+      [{dr:0,dc:0,sub:'main'},{dr:0,dc:1,sub:'main'}],   // H
+      [{dr:0,dc:0,sub:'main'},{dr:1,dc:0,sub:'main'}]    // V
+    ],
+    colors: {main:'#c8a878'},
+    swatch: '#c8a878'
+  },
+  pathCorner: {
+    name: 'Path Corner',
+    footprints: [
+      [{dr:0,dc:0,sub:'main'},{dr:0,dc:1,sub:'main'},{dr:1,dc:0,sub:'main'},{dr:1,dc:1,sub:'main'}],
+      [{dr:0,dc:0,sub:'main'},{dr:0,dc:1,sub:'main'},{dr:1,dc:0,sub:'main'},{dr:1,dc:1,sub:'main'}],
+      [{dr:0,dc:0,sub:'main'},{dr:0,dc:1,sub:'main'},{dr:1,dc:0,sub:'main'},{dr:1,dc:1,sub:'main'}],
+      [{dr:0,dc:0,sub:'main'},{dr:0,dc:1,sub:'main'},{dr:1,dc:0,sub:'main'},{dr:1,dc:1,sub:'main'}]
+    ],
+    colors: {main:'#c8a878'},
+    swatch: '#c8a878'
+  }
 };
 
-// Colours for each space type
-const TYPE_COLOURS = {
-  [SPACE_TYPES.ROAD]:         '#888888',
-  [SPACE_TYPES.SIDEWALK]:     '#d4b896',
-  [SPACE_TYPES.TERRITORY]:    '#7ec850',
-  [SPACE_TYPES.HOME]:         '#f0c040',
-  [SPACE_TYPES.DOG_PARK]:     '#40c080',
-  [SPACE_TYPES.WATER_SOURCE]: '#40a0e0',
-  [SPACE_TYPES.CHANCE_SPOT]:  '#d080d0',
-  [SPACE_TYPES.EVENTS]:       '#f08040',
-  [SPACE_TYPES.INTERSECTION]: '#aaaaaa',
+var PLAYER_COLORS = {
+  blue:   {yard:'#88aaff', house:'#4477dd'},
+  purple: {yard:'#cc88ff', house:'#8844cc'},
+  orange: {yard:'#ffbb66', house:'#dd8833'},
+  yellow: {yard:'#ffee66', house:'#ccbb33'}
 };
 
-// Short labels drawn on cells
-const TYPE_LABELS = {
-  [SPACE_TYPES.ROAD]:         'RD',
-  [SPACE_TYPES.SIDEWALK]:     'SW',
-  [SPACE_TYPES.TERRITORY]:    'TR',
-  [SPACE_TYPES.HOME]:         'HM',
-  [SPACE_TYPES.DOG_PARK]:     'PK',
-  [SPACE_TYPES.WATER_SOURCE]: 'H2O',
-  [SPACE_TYPES.CHANCE_SPOT]:  'CH',
-  [SPACE_TYPES.EVENTS]:       'EV',
-  [SPACE_TYPES.INTERSECTION]: 'IX',
-};
+// Quarter-circle arc params for each path-corner rotation.
+// cx/cy are in cell units from the component's top-left corner.
+var CORNER_ARCS = [
+  {cx:2, cy:2, start:Math.PI,       end:1.5*Math.PI},   // rot 0: S→E
+  {cx:0, cy:2, start:1.5*Math.PI,   end:2*Math.PI},     // rot 1: W→S
+  {cx:0, cy:0, start:0,             end:0.5*Math.PI},   // rot 2: N→W
+  {cx:2, cy:0, start:0.5*Math.PI,   end:Math.PI}        // rot 3: E→N
+];
 
-// ─── State ───────────────────────────────────────────────────────────
+// Path-corner entry/exit cell offsets (within 2×2 block) per rotation.
+var CORNER_ENDPOINTS = [
+  {entry:{dr:1,dc:0}, exit:{dr:0,dc:1}},  // rot 0
+  {entry:{dr:0,dc:0}, exit:{dr:1,dc:1}},  // rot 1
+  {entry:{dr:0,dc:1}, exit:{dr:1,dc:0}},  // rot 2
+  {entry:{dr:1,dc:1}, exit:{dr:0,dc:0}}   // rot 3
+];
 
-let gridCols = 22;
-let gridRows = 19;
-let cellSize = 48;
-let grid = [];          // 2D array [row][col] → null | space object
-let selectedStamp = null;
-let selectedCell = null; // { row, col }
-let idCounter = 0;
+// ─── State ──────────────────────────────────────────────────────────
+
+var gridCols = 22;
+var gridRows = 19;
+var grid = [];        // grid[r][c] = {comp, sub} | null
+var components = [];  // all placed component objects
+var nextIdNum = 0;
+
+var activeStamp = null;  // type key or null
+var activeRot = 0;
+var selected = null;     // component object or null
+
+var hoverR = -1, hoverC = -1;
+var dragging = null;     // {comp, origRow, origCol, offR, offC}
+var dragStarted = false;
+var mouseDownPos = null;
+
+var canvas, ctx;
+
+// ─── Grid Helpers ───────────────────────────────────────────────────
 
 function initGrid(cols, rows) {
   gridCols = cols;
   gridRows = rows;
   grid = [];
-  for (let r = 0; r < rows; r++) {
+  for (var r = 0; r < rows; r++) {
     grid[r] = [];
-    for (let c = 0; c < cols; c++) {
+    for (var c = 0; c < cols; c++) grid[r][c] = null;
+  }
+}
+
+function fp(type, rot) {
+  var d = DEFS[type];
+  return d.footprints[rot % d.footprints.length];
+}
+
+function cellColor(type, sub, playerColour) {
+  if (type === 'home' && playerColour && PLAYER_COLORS[playerColour]) {
+    return PLAYER_COLORS[playerColour][sub] || '#888';
+  }
+  return DEFS[type].colors[sub] || '#888';
+}
+
+function canPlace(type, rot, row, col, ignore) {
+  var cells = fp(type, rot);
+  for (var i = 0; i < cells.length; i++) {
+    var r = row + cells[i].dr, c = col + cells[i].dc;
+    if (r < 0 || r >= gridRows || c < 0 || c >= gridCols) return false;
+    if (grid[r][c] && (!ignore || grid[r][c].comp !== ignore)) return false;
+  }
+  return true;
+}
+
+function placeOnGrid(comp) {
+  var cells = fp(comp.type, comp.rotation);
+  for (var i = 0; i < cells.length; i++) {
+    grid[comp.row + cells[i].dr][comp.col + cells[i].dc] = {comp:comp, sub:cells[i].sub};
+  }
+}
+
+function removeFromGrid(comp) {
+  var cells = fp(comp.type, comp.rotation);
+  for (var i = 0; i < cells.length; i++) {
+    var r = comp.row + cells[i].dr, c = comp.col + cells[i].dc;
+    if (r >= 0 && r < gridRows && c >= 0 && c < gridCols &&
+        grid[r][c] && grid[r][c].comp === comp) {
       grid[r][c] = null;
     }
   }
-  selectedCell = null;
-  idCounter = 0;
 }
 
-function nextId(type) {
-  idCounter++;
-  return `${type}_${idCounter}`;
+function makeId(type) {
+  nextIdNum++;
+  return type + '_' + nextIdNum;
 }
 
-// ─── Canvas rendering ────────────────────────────────────────────────
+function compAt(row, col) {
+  if (row < 0 || row >= gridRows || col < 0 || col >= gridCols) return null;
+  return grid[row][col] ? grid[row][col].comp : null;
+}
 
-let canvas, ctx;
+function deleteComp(comp) {
+  removeFromGrid(comp);
+  var i = components.indexOf(comp);
+  if (i >= 0) components.splice(i, 1);
+}
+
+// ─── Canvas Rendering ───────────────────────────────────────────────
 
 function resizeCanvas() {
-  canvas.width = gridCols * cellSize;
-  canvas.height = gridRows * cellSize;
+  canvas.width = gridCols * CELL;
+  canvas.height = gridRows * CELL;
 }
 
-function drawGrid() {
+function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Grid lines
-  ctx.strokeStyle = '#ddd';
-  ctx.lineWidth = 1;
-  for (let r = 0; r <= gridRows; r++) {
-    ctx.beginPath();
-    ctx.moveTo(0, r * cellSize);
-    ctx.lineTo(gridCols * cellSize, r * cellSize);
-    ctx.stroke();
-  }
-  for (let c = 0; c <= gridCols; c++) {
-    ctx.beginPath();
-    ctx.moveTo(c * cellSize, 0);
-    ctx.lineTo(c * cellSize, gridRows * cellSize);
-    ctx.stroke();
-  }
+  // Background
+  ctx.fillStyle = '#222240';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Filled cells
-  for (let r = 0; r < gridRows; r++) {
-    for (let c = 0; c < gridCols; c++) {
-      const space = grid[r][c];
-      if (!space) continue;
-      const x = c * cellSize;
-      const y = r * cellSize;
-      ctx.fillStyle = TYPE_COLOURS[space.type] || '#ccc';
-      ctx.fillRect(x + 1, y + 1, cellSize - 2, cellSize - 2);
-
-      // Label
-      ctx.fillStyle = '#fff';
-      ctx.font = 'bold 11px monospace';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(TYPE_LABELS[space.type] || '??', x + cellSize / 2, y + cellSize / 2 - 7);
-
-      // ID (truncated)
-      ctx.font = '9px monospace';
-      ctx.fillStyle = 'rgba(255,255,255,0.8)';
-      const idLabel = space.id.length > 8 ? space.id.slice(0, 8) + '..' : space.id;
-      ctx.fillText(idLabel, x + cellSize / 2, y + cellSize / 2 + 7);
-    }
-  }
-
-  // Edge lines between adjacent occupied cells
-  ctx.lineWidth = 2;
-  for (let r = 0; r < gridRows; r++) {
-    for (let c = 0; c < gridCols; c++) {
-      if (!grid[r][c]) continue;
-      // Right neighbor
-      if (c + 1 < gridCols && grid[r][c + 1]) {
-        const cost = edgeCost(grid[r][c], grid[r][c + 1]);
-        ctx.strokeStyle = cost > 0 ? '#e04040' : '#444';
-        ctx.beginPath();
-        ctx.moveTo((c + 1) * cellSize, r * cellSize + cellSize / 2);
-        ctx.lineTo((c + 1) * cellSize, r * cellSize + cellSize / 2);
-        // Draw a small connector
-        ctx.moveTo(c * cellSize + cellSize - 1, r * cellSize + cellSize / 2);
-        ctx.lineTo((c + 1) * cellSize + 1, r * cellSize + cellSize / 2);
-        ctx.stroke();
-        if (cost > 0) {
-          ctx.fillStyle = '#e04040';
-          ctx.font = 'bold 10px monospace';
-          ctx.textAlign = 'center';
-          ctx.fillText(cost.toString(), (c + 1) * cellSize, r * cellSize + cellSize / 2 - 6);
-        }
-      }
-      // Bottom neighbor
-      if (r + 1 < gridRows && grid[r + 1][c]) {
-        const cost = edgeCost(grid[r][c], grid[r + 1][c]);
-        ctx.strokeStyle = cost > 0 ? '#e04040' : '#444';
-        ctx.beginPath();
-        ctx.moveTo(c * cellSize + cellSize / 2, (r + 1) * cellSize - 1);
-        ctx.lineTo(c * cellSize + cellSize / 2, (r + 1) * cellSize + 1);
-        ctx.stroke();
-        if (cost > 0) {
-          ctx.fillStyle = '#e04040';
-          ctx.font = 'bold 10px monospace';
-          ctx.textAlign = 'center';
-          ctx.fillText(cost.toString(), c * cellSize + cellSize / 2 + 10, (r + 1) * cellSize + 4);
-        }
+  // Grid lines on empty cells only
+  ctx.strokeStyle = '#3a3a5a';
+  ctx.lineWidth = 0.5;
+  for (var r = 0; r < gridRows; r++) {
+    for (var c = 0; c < gridCols; c++) {
+      if (!grid[r][c]) {
+        ctx.strokeRect(c * CELL + 0.5, r * CELL + 0.5, CELL - 1, CELL - 1);
       }
     }
   }
 
-  // Selection highlight
-  if (selectedCell) {
-    const { row, col } = selectedCell;
-    ctx.strokeStyle = '#0080ff';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(col * cellSize + 1, row * cellSize + 1, cellSize - 2, cellSize - 2);
-  }
-}
-
-// ─── Edge cost logic ─────────────────────────────────────────────────
-
-function edgeCost(spaceA, spaceB) {
-  // Road crossing: different sides means road between them
-  if (spaceA.side && spaceB.side && spaceA.side !== spaceB.side) {
-    // Free at intersections
-    if (spaceA.type === SPACE_TYPES.INTERSECTION || spaceB.type === SPACE_TYPES.INTERSECTION) {
-      return 0;
+  // Placed component cells
+  for (var r = 0; r < gridRows; r++) {
+    for (var c = 0; c < gridCols; c++) {
+      var g = grid[r][c];
+      if (!g) continue;
+      ctx.fillStyle = cellColor(g.comp.type, g.sub, g.comp.playerColour);
+      ctx.fillRect(c * CELL, r * CELL, CELL, CELL);
     }
-    // Mid-block crossing costs 1 Drive
-    return 1;
   }
-  return 0;
+
+  // Path corner arcs
+  for (var i = 0; i < components.length; i++) {
+    if (components[i].type === 'pathCorner') drawArc(components[i]);
+  }
+
+  // Selection outline
+  if (selected) drawOutline(selected, '#0080ff', 2.5);
+
+  // Ghost preview
+  if (hoverR >= 0 && hoverC >= 0) {
+    if (dragging && dragStarted) {
+      drawGhost(dragging.comp.type, dragging.comp.rotation,
+                hoverR - dragging.offR, hoverC - dragging.offC,
+                dragging.comp.playerColour, dragging.comp);
+    } else if (activeStamp && !dragging) {
+      drawGhost(activeStamp, activeRot, hoverR, hoverC, null, null);
+    }
+  }
 }
 
-// ─── Palette ─────────────────────────────────────────────────────────
+function drawArc(comp) {
+  var a = CORNER_ARCS[comp.rotation % 4];
+  var x = comp.col * CELL + a.cx * CELL;
+  var y = comp.row * CELL + a.cy * CELL;
+  ctx.strokeStyle = '#a08060';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(x, y, CELL, a.start, a.end, false);
+  ctx.stroke();
+}
+
+function drawOutline(comp, color, width) {
+  var cells = fp(comp.type, comp.rotation);
+  var set = {};
+  for (var i = 0; i < cells.length; i++) {
+    set[(comp.row + cells[i].dr) + ',' + (comp.col + cells[i].dc)] = true;
+  }
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  for (var key in set) {
+    var p = key.split(','), r = +p[0], c = +p[1];
+    var x = c * CELL, y = r * CELL;
+    if (!set[(r-1)+','+c]) { ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+CELL,y); ctx.stroke(); }
+    if (!set[(r+1)+','+c]) { ctx.beginPath(); ctx.moveTo(x,y+CELL); ctx.lineTo(x+CELL,y+CELL); ctx.stroke(); }
+    if (!set[r+','+(c-1)]) { ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x,y+CELL); ctx.stroke(); }
+    if (!set[r+','+(c+1)]) { ctx.beginPath(); ctx.moveTo(x+CELL,y); ctx.lineTo(x+CELL,y+CELL); ctx.stroke(); }
+  }
+}
+
+function drawGhost(type, rot, row, col, playerColour, ignore) {
+  var cells = fp(type, rot);
+  var ok = canPlace(type, rot, row, col, ignore);
+  for (var i = 0; i < cells.length; i++) {
+    var r = row + cells[i].dr, c = col + cells[i].dc;
+    if (r < 0 || r >= gridRows || c < 0 || c >= gridCols) continue;
+    ctx.fillStyle = ok
+      ? hexRgba(cellColor(type, cells[i].sub, playerColour), 0.5)
+      : 'rgba(255,60,60,0.4)';
+    ctx.fillRect(c * CELL, r * CELL, CELL, CELL);
+  }
+}
+
+function hexRgba(hex, a) {
+  return 'rgba(' + parseInt(hex.slice(1,3),16) + ',' +
+                   parseInt(hex.slice(3,5),16) + ',' +
+                   parseInt(hex.slice(5,7),16) + ',' + a + ')';
+}
+
+// ─── Palette ────────────────────────────────────────────────────────
 
 function buildPalette() {
-  const palette = document.getElementById('palette');
-  palette.innerHTML = '<h3>Components</h3>';
-  for (const [key, type] of Object.entries(SPACE_TYPES)) {
-    const btn = document.createElement('button');
-    btn.className = 'stamp-btn';
-    btn.dataset.type = type;
-    btn.innerHTML = `<span class="stamp-colour" style="background:${TYPE_COLOURS[type]}"></span> ${key}`;
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.stamp-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      selectedStamp = type;
-    });
-    palette.appendChild(btn);
+  var el = document.getElementById('palette');
+  el.innerHTML = '<h3>Components</h3>';
+  var keys = Object.keys(DEFS);
+  for (var i = 0; i < keys.length; i++) {
+    (function(type) {
+      var d = DEFS[type];
+      var btn = document.createElement('button');
+      btn.className = 'stamp-btn';
+      btn.dataset.type = type;
+      btn.innerHTML = '<span class="stamp-swatch" style="background:' + d.swatch + '"></span> ' + d.name;
+      btn.addEventListener('click', function() { setStamp(type); });
+      el.appendChild(btn);
+    })(keys[i]);
   }
-
-  // Eraser
-  const eraser = document.createElement('button');
-  eraser.className = 'stamp-btn';
-  eraser.innerHTML = '<span class="stamp-colour" style="background:#fff;border:1px solid #999"></span> ERASER';
-  eraser.addEventListener('click', () => {
-    document.querySelectorAll('.stamp-btn').forEach(b => b.classList.remove('active'));
-    eraser.classList.add('active');
-    selectedStamp = '__erase__';
-  });
-  palette.appendChild(eraser);
 }
 
-// ─── Metadata panel ──────────────────────────────────────────────────
+function setStamp(type) {
+  activeStamp = (activeStamp === type) ? null : type;
+  activeRot = 0;
+  selected = null;
+  refreshPalette();
+  updateRotLabel();
+  updateProps();
+  draw();
+}
 
-function updateMetadataPanel() {
-  const panel = document.getElementById('metadata');
-  if (!selectedCell || !grid[selectedCell.row][selectedCell.col]) {
-    panel.innerHTML = '<p class="hint">Click an occupied cell to edit its properties.</p>';
+function refreshPalette() {
+  var btns = document.querySelectorAll('.stamp-btn');
+  for (var i = 0; i < btns.length; i++)
+    btns[i].classList.toggle('active', btns[i].dataset.type === activeStamp);
+}
+
+function updateRotLabel() {
+  var el = document.getElementById('rotation-label');
+  if (!activeStamp) { el.textContent = ''; return; }
+  var d = DEFS[activeStamp];
+  if (d.footprints.length <= 1) { el.textContent = ''; return; }
+  var tag = '';
+  if (activeStamp === 'territory' || activeStamp === 'home')
+    tag = FACING[activeRot % 4];
+  else if (activeStamp === 'pathCorner')
+    tag = 'rot ' + (activeRot % 4);
+  else
+    tag = (activeRot % 2 === 0) ? 'H' : 'V';
+  el.textContent = '[R] rotate \u2014 ' + tag;
+}
+
+// ─── Properties Panel ───────────────────────────────────────────────
+
+function updateProps() {
+  var el = document.getElementById('props');
+  if (!selected) {
+    el.innerHTML = '<p class="hint">Select a component to edit properties, or choose a stamp to place.</p>';
     return;
   }
-  const space = grid[selectedCell.row][selectedCell.col];
-  const t = space.type;
+  var c = selected;
+  var h = '<h3>Properties</h3>';
+  h += '<label>ID<input type="text" id="prop-id" value="' + esc(c.id) + '"></label>';
+  h += '<label>Type<input type="text" value="' + esc(DEFS[c.type].name) + '" disabled></label>';
 
-  // Common fields for all types
-  let html = `
-    <h3>Properties</h3>
-    <label>ID
-      <input type="text" id="meta-id" value="${esc(space.id)}" />
-    </label>
-    <label>Type
-      <input type="text" id="meta-type" value="${esc(space.type)}" disabled />
-    </label>
-    <label>Label
-      <input type="text" id="meta-label" value="${esc(space.label || '')}" placeholder="human-readable name" />
-    </label>`;
-
-  // TERRITORY: facing direction
-  if (t === SPACE_TYPES.TERRITORY) {
-    html += `
-    <label>Facing Direction
-      <select id="meta-facing">
-        <option value="" ${!space.facing ? 'selected' : ''}>(none)</option>
-        <option value="north" ${space.facing === 'north' ? 'selected' : ''}>north</option>
-        <option value="south" ${space.facing === 'south' ? 'selected' : ''}>south</option>
-        <option value="east" ${space.facing === 'east' ? 'selected' : ''}>east</option>
-        <option value="west" ${space.facing === 'west' ? 'selected' : ''}>west</option>
-      </select>
-    </label>`;
+  if (c.type === 'territory' || c.type === 'home') {
+    h += '<label>Facing<input type="text" value="' + FACING[c.rotation % 4] + '" readonly></label>';
+  }
+  if (c.type === 'home') {
+    h += '<label>Player Colour<select id="prop-colour">';
+    h += '<option value=""' + (!c.playerColour ? ' selected' : '') + '>(none)</option>';
+    var cols = ['blue','purple','orange','yellow'];
+    for (var i = 0; i < cols.length; i++)
+      h += '<option value="'+cols[i]+'"'+(c.playerColour===cols[i]?' selected':'')+'>'+cols[i]+'</option>';
+    h += '</select></label>';
   }
 
-  // HOME: player colour + facing direction
-  if (t === SPACE_TYPES.HOME) {
-    html += `
-    <label>Player Colour
-      <select id="meta-playerColour">
-        <option value="" ${!space.playerColour ? 'selected' : ''}>(none)</option>
-        <option value="blue" ${space.playerColour === 'blue' ? 'selected' : ''}>blue</option>
-        <option value="purple" ${space.playerColour === 'purple' ? 'selected' : ''}>purple</option>
-        <option value="orange" ${space.playerColour === 'orange' ? 'selected' : ''}>orange</option>
-        <option value="yellow" ${space.playerColour === 'yellow' ? 'selected' : ''}>yellow</option>
-      </select>
-    </label>
-    <label>Facing Direction
-      <select id="meta-facing">
-        <option value="" ${!space.facing ? 'selected' : ''}>(none)</option>
-        <option value="north" ${space.facing === 'north' ? 'selected' : ''}>north</option>
-        <option value="south" ${space.facing === 'south' ? 'selected' : ''}>south</option>
-        <option value="east" ${space.facing === 'east' ? 'selected' : ''}>east</option>
-        <option value="west" ${space.facing === 'west' ? 'selected' : ''}>west</option>
-      </select>
-    </label>`;
-  }
-
-  // ROAD, SIDEWALK, INTERSECTION: side field
-  if (t === SPACE_TYPES.ROAD || t === SPACE_TYPES.SIDEWALK || t === SPACE_TYPES.INTERSECTION) {
-    html += `
-    <label>Side
-      <select id="meta-side">
-        <option value="" ${!space.side ? 'selected' : ''}>(none)</option>
-        <option value="north" ${space.side === 'north' ? 'selected' : ''}>north</option>
-        <option value="south" ${space.side === 'south' ? 'selected' : ''}>south</option>
-        <option value="east" ${space.side === 'east' ? 'selected' : ''}>east</option>
-        <option value="west" ${space.side === 'west' ? 'selected' : ''}>west</option>
-      </select>
-    </label>`;
-  }
-
-  html += `<button id="meta-apply" class="action-btn">Apply</button>`;
-
-  panel.innerHTML = html;
-  document.getElementById('meta-apply').addEventListener('click', applyMetadata);
+  h += '<button id="apply-btn">Apply</button>';
+  el.innerHTML = h;
+  document.getElementById('apply-btn').addEventListener('click', applyProps);
 }
 
-function applyMetadata() {
-  if (!selectedCell) return;
-  const space = grid[selectedCell.row][selectedCell.col];
-  if (!space) return;
+function applyProps() {
+  if (!selected) return;
+  var nid = document.getElementById('prop-id').value.trim();
+  if (!nid) { alert('ID cannot be empty.'); return; }
+  if (nid !== selected.id) {
+    for (var i = 0; i < components.length; i++) {
+      if (components[i].id === nid) { alert('Duplicate ID: ' + nid); return; }
+    }
+    selected.id = nid;
+  }
+  if (selected.type === 'home') {
+    var sel = document.getElementById('prop-colour');
+    if (sel) selected.playerColour = sel.value || null;
+  }
+  draw();
+  updateProps();
+}
 
-  const newId = document.getElementById('meta-id').value.trim();
-  const oldId = space.id;
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+}
 
-  // Check for duplicate ids
-  if (newId !== oldId) {
-    for (let r = 0; r < gridRows; r++) {
-      for (let c = 0; c < gridCols; c++) {
-        if (grid[r][c] && grid[r][c].id === newId) {
-          alert('Duplicate ID: ' + newId);
-          return;
+// ─── Input Handling ─────────────────────────────────────────────────
+
+function cellFromEvent(e) {
+  var r = canvas.getBoundingClientRect();
+  return { row: Math.floor((e.clientY - r.top) / CELL),
+           col: Math.floor((e.clientX - r.left) / CELL) };
+}
+
+function onMouseMove(e) {
+  var p = cellFromEvent(e);
+  hoverR = p.row; hoverC = p.col;
+
+  if (dragging && mouseDownPos) {
+    var dx = e.clientX - mouseDownPos.x, dy = e.clientY - mouseDownPos.y;
+    if (!dragStarted && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
+      dragStarted = true;
+      removeFromGrid(dragging.comp);
+    }
+  }
+  draw();
+}
+
+function onMouseDown(e) {
+  if (e.button !== 0) return;
+  var p = cellFromEvent(e);
+  mouseDownPos = {x: e.clientX, y: e.clientY};
+
+  // With no active stamp, clicking a component selects and prepares drag
+  if (!activeStamp) {
+    var c = compAt(p.row, p.col);
+    if (c) {
+      selected = c;
+      dragging = {comp:c, origRow:c.row, origCol:c.col, offR:p.row-c.row, offC:p.col-c.col};
+      dragStarted = false;
+      updateProps();
+      draw();
+    }
+  }
+}
+
+function onMouseUp(e) {
+  var p = cellFromEvent(e);
+
+  // Finalise drag
+  if (dragging && dragStarted) {
+    var nr = p.row - dragging.offR, nc = p.col - dragging.offC;
+    if (canPlace(dragging.comp.type, dragging.comp.rotation, nr, nc, null)) {
+      dragging.comp.row = nr;
+      dragging.comp.col = nc;
+    } else {
+      dragging.comp.row = dragging.origRow;
+      dragging.comp.col = dragging.origCol;
+    }
+    placeOnGrid(dragging.comp);
+    dragging = null; dragStarted = false; mouseDownPos = null;
+    draw();
+    return;
+  }
+
+  // Click (no drag) on component — already selected in mousedown
+  if (dragging && !dragStarted) {
+    dragging = null; dragStarted = false; mouseDownPos = null;
+    draw();
+    return;
+  }
+
+  // Stamp placement
+  if (activeStamp) {
+    if (p.row >= 0 && p.row < gridRows && p.col >= 0 && p.col < gridCols) {
+      if (canPlace(activeStamp, activeRot, p.row, p.col, null)) {
+        var c = {id:makeId(activeStamp), type:activeStamp, row:p.row, col:p.col,
+                 rotation:activeRot, playerColour:null};
+        components.push(c);
+        placeOnGrid(c);
+        selected = c;
+        updateProps();
+      }
+    }
+    mouseDownPos = null;
+    draw();
+    return;
+  }
+
+  // Click empty → deselect
+  if (!compAt(p.row, p.col)) {
+    selected = null;
+    updateProps();
+  }
+  mouseDownPos = null;
+  draw();
+}
+
+function onKeyDown(e) {
+  var inField = e.target && e.target.closest && e.target.closest('input, select');
+
+  if ((e.key === 'r' || e.key === 'R') && !inField) {
+    if (activeStamp) {
+      var d = DEFS[activeStamp];
+      activeRot = (activeRot + 1) % d.footprints.length;
+      updateRotLabel();
+      draw();
+    }
+  }
+
+  if ((e.key === 'Delete' || e.key === 'Backspace') && !inField) {
+    if (selected) {
+      deleteComp(selected);
+      selected = null;
+      updateProps();
+      draw();
+    }
+  }
+
+  if (e.key === 'Escape') {
+    if (activeStamp) { activeStamp = null; activeRot = 0; refreshPalette(); updateRotLabel(); }
+    if (selected) { selected = null; updateProps(); }
+    if (dragging) {
+      if (dragStarted) {
+        dragging.comp.row = dragging.origRow;
+        dragging.comp.col = dragging.origCol;
+        placeOnGrid(dragging.comp);
+      }
+      dragging = null; dragStarted = false;
+    }
+    draw();
+  }
+}
+
+// ─── Export (Save JSON) ─────────────────────────────────────────────
+
+function exportJSON() {
+  var spaces = [];
+  var edges = [];
+  var positions = [];
+  var nodeMap = {}; // 'r,c' → nodeId
+
+  for (var i = 0; i < components.length; i++) {
+    var comp = components[i];
+    var cells = fp(comp.type, comp.rotation);
+
+    // Roads are barriers, not nodes
+    if (comp.type === 'road') continue;
+
+    if (comp.type === 'territory' || comp.type === 'home') {
+      // Only yard cells become space nodes
+      var yi = 0;
+      for (var j = 0; j < cells.length; j++) {
+        if (cells[j].sub !== 'yard') continue;
+        var r = comp.row + cells[j].dr, c = comp.col + cells[j].dc;
+        var nid = comp.id + '_' + yi;
+        var node = {id: nid, type: comp.type === 'home' ? 'home' : 'territory'};
+        if (comp.type === 'territory') node.facing = FACING_FULL[comp.rotation % 4];
+        if (comp.type === 'home' && comp.playerColour) {
+          node.playerColour = comp.playerColour;
+          node.homeOwner = comp.playerColour;
+        }
+        spaces.push(node);
+        nodeMap[r+','+c] = nid;
+        positions.push({id:nid, row:r, col:c});
+        yi++;
+      }
+
+    } else if (comp.type === 'pathStraight') {
+      var c0 = {r:comp.row+cells[0].dr, c:comp.col+cells[0].dc};
+      var c1 = {r:comp.row+cells[1].dr, c:comp.col+cells[1].dc};
+      var eid = comp.id+'_entry', xid = comp.id+'_exit';
+      spaces.push({id:eid, type:'sideStreet'});
+      spaces.push({id:xid, type:'sideStreet'});
+      nodeMap[c0.r+','+c0.c] = eid;
+      nodeMap[c1.r+','+c1.c] = xid;
+      positions.push({id:eid, row:c0.r, col:c0.c});
+      positions.push({id:xid, row:c1.r, col:c1.c});
+      edges.push({from:eid, to:xid, driveCost:1});
+
+    } else if (comp.type === 'pathCorner') {
+      var ep = CORNER_ENDPOINTS[comp.rotation % 4];
+      var er = comp.row+ep.entry.dr, ec = comp.col+ep.entry.dc;
+      var xr = comp.row+ep.exit.dr,  xc = comp.col+ep.exit.dc;
+      var eid = comp.id+'_entry', xid = comp.id+'_exit';
+      spaces.push({id:eid, type:'sideStreet'});
+      spaces.push({id:xid, type:'sideStreet'});
+      nodeMap[er+','+ec] = eid;
+      nodeMap[xr+','+xc] = xid;
+      positions.push({id:eid, row:er, col:ec});
+      positions.push({id:xid, row:xr, col:xc});
+      edges.push({from:eid, to:xid, driveCost:1});
+
+    } else {
+      // sidewalk, intersection, dogPark, waterPark — each cell is a node
+      for (var j = 0; j < cells.length; j++) {
+        var r = comp.row + cells[j].dr, c = comp.col + cells[j].dc;
+        var nid = cells.length > 1 ? comp.id + '_' + j : comp.id;
+        var exportType = comp.type;
+        if (exportType === 'waterPark') exportType = 'waterSource';
+        spaces.push({id:nid, type:exportType});
+        nodeMap[r+','+c] = nid;
+        positions.push({id:nid, row:r, col:c});
+      }
+    }
+  }
+
+  // Build a fast type lookup
+  var typeOf = {};
+  for (var s = 0; s < spaces.length; s++) typeOf[spaces[s].id] = spaces[s].type;
+
+  // Adjacency-based edges
+  var CONNECT = {
+    'sidewalk':    ['sidewalk','intersection','territory','home','dogPark','waterSource','sideStreet'],
+    'intersection':['sidewalk','intersection'],
+    'territory':   ['sidewalk'],
+    'home':        ['sidewalk'],
+    'dogPark':     ['sidewalk'],
+    'waterSource': ['sidewalk'],
+    'sideStreet':  ['sidewalk']
+  };
+  var edgeSeen = {};
+  var DIRS = [[0,1],[0,-1],[1,0],[-1,0]];
+
+  for (var p = 0; p < positions.length; p++) {
+    var pos = positions[p];
+    var nt = typeOf[pos.id];
+    var allowed = CONNECT[nt];
+    if (!allowed) continue;
+    for (var d = 0; d < DIRS.length; d++) {
+      var nk = (pos.row+DIRS[d][0])+','+(pos.col+DIRS[d][1]);
+      var nid = nodeMap[nk];
+      if (!nid) continue;
+      var nnt = typeOf[nid];
+      if (allowed.indexOf(nnt) < 0) continue;
+      var ek = [pos.id, nid].sort().join('|');
+      if (edgeSeen[ek]) continue;
+      edgeSeen[ek] = true;
+      edges.push({from:pos.id, to:nid, driveCost:0});
+    }
+  }
+
+  // Mid-block road crossings: walk through road cells to find sidewalk on other side
+  for (var p = 0; p < positions.length; p++) {
+    var pos = positions[p];
+    if (typeOf[pos.id] !== 'sidewalk') continue;
+    for (var d = 0; d < DIRS.length; d++) {
+      var dr = DIRS[d][0], dc = DIRS[d][1];
+      var cr = pos.row + dr, cc = pos.col + dc;
+      var crossed = false;
+      while (cr >= 0 && cr < gridRows && cc >= 0 && cc < gridCols) {
+        var g = grid[cr] && grid[cr][cc];
+        if (!g) break;
+        if (g.comp.type === 'road') { crossed = true; cr += dr; cc += dc; }
+        else if (g.comp.type === 'intersection') { crossed = false; break; }
+        else break;
+      }
+      if (!crossed) continue;
+      var farId = nodeMap[cr+','+cc];
+      if (farId && typeOf[farId] === 'sidewalk') {
+        var ek = [pos.id, farId].sort().join('|');
+        if (!edgeSeen[ek]) {
+          edgeSeen[ek] = true;
+          edges.push({from:pos.id, to:farId, driveCost:1});
         }
       }
     }
   }
 
-  space.id = newId;
-  space.label = document.getElementById('meta-label').value.trim() || space.id;
-
-  // Type-specific fields
-  const facingEl = document.getElementById('meta-facing');
-  if (facingEl) space.facing = facingEl.value || null;
-
-  const playerColourEl = document.getElementById('meta-playerColour');
-  if (playerColourEl) space.playerColour = playerColourEl.value || null;
-
-  const sideEl = document.getElementById('meta-side');
-  if (sideEl) space.side = sideEl.value || null;
-
-  drawGrid();
-  updateMetadataPanel();
-}
-
-function esc(str) {
-  return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
-}
-
-// ─── Grid interaction ────────────────────────────────────────────────
-
-function onCanvasClick(e) {
-  const rect = canvas.getBoundingClientRect();
-  const col = Math.floor((e.clientX - rect.left) / cellSize);
-  const row = Math.floor((e.clientY - rect.top) / cellSize);
-  if (row < 0 || row >= gridRows || col < 0 || col >= gridCols) return;
-
-  if (selectedStamp === '__erase__') {
-    grid[row][col] = null;
-    if (selectedCell && selectedCell.row === row && selectedCell.col === col) {
-      selectedCell = null;
-    }
-  } else if (selectedStamp) {
-    if (!grid[row][col]) {
-      const id = nextId(selectedStamp);
-      grid[row][col] = {
-        id,
-        type: selectedStamp,
-        side: null,
-        label: id,
-        facing: null,
-        playerColour: null,
-      };
-    }
-    selectedCell = { row, col };
-  } else {
-    // No stamp selected — just select cell
-    selectedCell = grid[row][col] ? { row, col } : null;
+  // Component-level data for round-trip reload
+  var compData = [];
+  for (var i = 0; i < components.length; i++) {
+    var c = components[i];
+    compData.push({id:c.id, type:c.type, row:c.row, col:c.col,
+                   rotation:c.rotation, playerColour:c.playerColour||undefined});
   }
 
-  drawGrid();
-  updateMetadataPanel();
+  return {
+    spaces: spaces,
+    edges: edges,
+    _positions: positions,
+    _grid: {cols:gridCols, rows:gridRows, components:compData}
+  };
 }
 
-// ─── Export / Import ─────────────────────────────────────────────────
-
-function exportBoard() {
-  const spaces = [];
-  const posMap = new Map(); // id → { row, col }
-
-  for (let r = 0; r < gridRows; r++) {
-    for (let c = 0; c < gridCols; c++) {
-      const s = grid[r][c];
-      if (!s) continue;
-      spaces.push({
-        id: s.id,
-        type: s.type,
-        side: s.side || undefined,
-        label: s.label,
-        facing: s.facing || undefined,
-        playerColour: s.playerColour || undefined,
-      });
-      posMap.set(s.id, { row: r, col: c });
-    }
-  }
-
-  // Build edges from grid adjacency
-  const edges = [];
-  const edgeSeen = new Set();
-  for (let r = 0; r < gridRows; r++) {
-    for (let c = 0; c < gridCols; c++) {
-      if (!grid[r][c]) continue;
-      const neighbors = [
-        [r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1],
-      ];
-      for (const [nr, nc] of neighbors) {
-        if (nr < 0 || nr >= gridRows || nc < 0 || nc >= gridCols) continue;
-        if (!grid[nr][nc]) continue;
-        const a = grid[r][c].id;
-        const b = grid[nr][nc].id;
-        const key = [a, b].sort().join('|');
-        if (edgeSeen.has(key)) continue;
-        edgeSeen.add(key);
-        const cost = edgeCost(grid[r][c], grid[nr][nc]);
-        edges.push({ from: a, to: b, driveCost: cost });
-      }
-    }
-  }
-
-  return { spaces, edges, _grid: { cols: gridCols, rows: gridRows, cellSize } };
-}
-
-function saveBoard() {
-  const data = exportBoard();
-  const name = prompt('Board name:', 'board-01') || 'board-01';
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a');
+function saveJSON() {
+  var data = exportJSON();
+  var name = prompt('Board name:', 'board-01');
+  if (!name) return;
+  var blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  var a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = name + '.json';
   a.click();
   URL.revokeObjectURL(a.href);
 }
 
-function loadBoard() {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = '.json';
-  input.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      try {
-        const data = JSON.parse(ev.target.result);
-        importBoard(data);
-      } catch (err) {
-        alert('Failed to load board: ' + err.message);
-      }
-    };
-    reader.readAsText(file);
-  });
-  input.click();
+// ─── Import (Load JSON) ────────────────────────────────────────────
+
+function loadJSON() {
+  document.getElementById('file-input').click();
 }
 
-function importBoard(data) {
-  // Restore grid dimensions if saved
-  if (data._grid) {
-    gridCols = data._grid.cols || 22;
-    gridRows = data._grid.rows || 19;
-    cellSize = data._grid.cellSize || 48;
-    document.getElementById('grid-cols').value = gridCols;
-    document.getElementById('grid-rows').value = gridRows;
-  }
+function onFileLoad(e) {
+  var file = e.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    try { importJSON(JSON.parse(ev.target.result)); }
+    catch (err) { alert('Failed to load: ' + err.message); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
 
+function importJSON(data) {
+  if (!data._grid || !data._grid.components) {
+    alert('This file does not contain board builder layout data.');
+    return;
+  }
+  gridCols = data._grid.cols || 22;
+  gridRows = data._grid.rows || 19;
+  document.getElementById('grid-cols').value = gridCols;
+  document.getElementById('grid-rows').value = gridRows;
   initGrid(gridCols, gridRows);
   resizeCanvas();
+  components = [];
+  nextIdNum = 0;
+  selected = null;
 
-  // We need to place spaces on the grid. If _grid layout data is present we
-  // can recover positions from the edges + a simple BFS layout. But the
-  // simplest approach: save grid positions in the export. Let's store
-  // _positions in the export too.
-  // For files without _positions, stack spaces left-to-right, top-to-bottom.
-
-  if (data._positions) {
-    for (const p of data._positions) {
-      if (p.row < gridRows && p.col < gridCols) {
-        const spaceDef = data.spaces.find(s => s.id === p.id);
-        if (spaceDef) {
-          grid[p.row][p.col] = {
-            id: spaceDef.id,
-            type: spaceDef.type,
-            side: spaceDef.side || null,
-            label: spaceDef.label || spaceDef.id,
-            facing: spaceDef.facing || null,
-            playerColour: spaceDef.playerColour || null,
-          };
-          const num = parseInt(spaceDef.id.replace(/[^0-9]/g, ''), 10);
-          if (!isNaN(num) && num >= idCounter) idCounter = num;
-        }
-      }
-    }
-  } else {
-    // Fallback: place sequentially
-    let r = 0, c = 0;
-    for (const spaceDef of data.spaces) {
-      if (r >= gridRows) break;
-      grid[r][c] = {
-        id: spaceDef.id,
-        type: spaceDef.type,
-        side: spaceDef.side || null,
-        label: spaceDef.label || spaceDef.id,
-        facing: spaceDef.facing || null,
-        playerColour: spaceDef.playerColour || null,
-      };
-      const num = parseInt(spaceDef.id.replace(/[^0-9]/g, ''), 10);
-      if (!isNaN(num) && num >= idCounter) idCounter = num;
-      c++;
-      if (c >= gridCols) { c = 0; r++; }
+  var list = data._grid.components;
+  for (var i = 0; i < list.length; i++) {
+    var d = list[i];
+    var c = {id:d.id, type:d.type, row:d.row, col:d.col,
+             rotation:d.rotation||0, playerColour:d.playerColour||null};
+    var num = parseInt(c.id.replace(/[^0-9]/g,''), 10);
+    if (!isNaN(num) && num > nextIdNum) nextIdNum = num;
+    if (canPlace(c.type, c.rotation, c.row, c.col, null)) {
+      components.push(c);
+      placeOnGrid(c);
     }
   }
-
-  selectedCell = null;
-  drawGrid();
-  updateMetadataPanel();
+  updateProps();
+  draw();
 }
 
-// Override exportBoard to include positions
-const _origExport = exportBoard;
-function exportBoardWithPositions() {
-  const data = _origExport();
-  const positions = [];
-  for (let r = 0; r < gridRows; r++) {
-    for (let c = 0; c < gridCols; c++) {
-      if (grid[r][c]) {
-        positions.push({ id: grid[r][c].id, row: r, col: c });
-      }
+// ─── Grid Resize ────────────────────────────────────────────────────
+
+function applyResize() {
+  var nc = parseInt(document.getElementById('grid-cols').value, 10) || 22;
+  var nr = parseInt(document.getElementById('grid-rows').value, 10) || 19;
+  var keep = [];
+  for (var i = 0; i < components.length; i++) {
+    var c = components[i], cells = fp(c.type, c.rotation), fits = true;
+    for (var j = 0; j < cells.length; j++) {
+      if (c.row + cells[j].dr >= nr || c.col + cells[j].dc >= nc) { fits = false; break; }
     }
+    if (fits) keep.push(c);
   }
-  data._positions = positions;
-  return data;
-}
-// Patch save to use the extended export
-function saveBoardPatched() {
-  const data = exportBoardWithPositions();
-  const name = prompt('Board name:', 'board-01') || 'board-01';
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = name + '.json';
-  a.click();
-  URL.revokeObjectURL(a.href);
-}
-
-// ─── Grid resize ─────────────────────────────────────────────────────
-
-function applyGridResize() {
-  const newCols = parseInt(document.getElementById('grid-cols').value, 10) || 22;
-  const newRows = parseInt(document.getElementById('grid-rows').value, 10) || 19;
-  // Preserve existing cells that fit
-  const oldGrid = grid;
-  const oldRows = gridRows;
-  const oldCols = gridCols;
-  initGrid(newCols, newRows);
-  for (let r = 0; r < Math.min(oldRows, newRows); r++) {
-    for (let c = 0; c < Math.min(oldCols, newCols); c++) {
-      grid[r][c] = oldGrid[r][c];
-    }
-  }
+  initGrid(nc, nr);
+  components = keep;
+  for (var i = 0; i < components.length; i++) placeOnGrid(components[i]);
+  selected = null;
   resizeCanvas();
-  drawGrid();
-  updateMetadataPanel();
+  updateProps();
+  draw();
 }
 
-// ─── Init ────────────────────────────────────────────────────────────
+// ─── Clear ──────────────────────────────────────────────────────────
+
+function clearBoard() {
+  if (!confirm('Clear the entire board?')) return;
+  initGrid(gridCols, gridRows);
+  components = [];
+  nextIdNum = 0;
+  selected = null;
+  updateProps();
+  draw();
+}
+
+// ─── Initialisation ─────────────────────────────────────────────────
 
 function init() {
   canvas = document.getElementById('board-canvas');
   ctx = canvas.getContext('2d');
-
   initGrid(gridCols, gridRows);
   resizeCanvas();
   buildPalette();
-  drawGrid();
-  updateMetadataPanel();
+  draw();
 
-  canvas.addEventListener('click', onCanvasClick);
-  document.getElementById('btn-save').addEventListener('click', saveBoardPatched);
-  document.getElementById('btn-load').addEventListener('click', loadBoard);
-  document.getElementById('btn-clear').addEventListener('click', () => {
-    if (confirm('Clear entire board?')) {
-      initGrid(gridCols, gridRows);
-      drawGrid();
-      updateMetadataPanel();
+  canvas.addEventListener('mousemove', onMouseMove);
+  canvas.addEventListener('mousedown', onMouseDown);
+  canvas.addEventListener('mouseup', onMouseUp);
+  canvas.addEventListener('mouseleave', function() {
+    hoverR = -1; hoverC = -1;
+    if (dragging && dragStarted) {
+      dragging.comp.row = dragging.origRow;
+      dragging.comp.col = dragging.origCol;
+      placeOnGrid(dragging.comp);
+      dragging = null; dragStarted = false;
     }
+    draw();
   });
-  document.getElementById('btn-resize').addEventListener('click', applyGridResize);
+
+  document.addEventListener('keydown', onKeyDown);
+  document.getElementById('btn-save').addEventListener('click', saveJSON);
+  document.getElementById('btn-load').addEventListener('click', loadJSON);
+  document.getElementById('btn-clear').addEventListener('click', clearBoard);
+  document.getElementById('btn-resize').addEventListener('click', applyResize);
+  document.getElementById('file-input').addEventListener('change', onFileLoad);
 }
 
 document.addEventListener('DOMContentLoaded', init);
