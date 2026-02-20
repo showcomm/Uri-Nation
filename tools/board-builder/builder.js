@@ -672,14 +672,22 @@ function exportJSON() {
       positions.push({id:nid0, row:cm.r, col:cm.c});
       positions.push({id:nid1, row:c2.r, col:c2.c});
 
+    } else if (comp.type === 'dogPark' || comp.type === 'waterPark') {
+      // Single graph node regardless of cell count; extra cells are visual filler.
+      var exportType = comp.type === 'waterPark' ? 'waterSource' : 'dogPark';
+      spaces.push({id:comp.id, type:exportType});
+      for (var j = 0; j < cells.length; j++) {
+        var r = comp.row + cells[j].dr, c = comp.col + cells[j].dc;
+        nodeMap[r+','+c] = comp.id;
+        positions.push({id:comp.id, row:r, col:c});
+      }
+
     } else {
-      // sidewalk, intersection, dogPark, waterPark — each cell is a node
+      // sidewalk, intersection — each cell is a node
       for (var j = 0; j < cells.length; j++) {
         var r = comp.row + cells[j].dr, c = comp.col + cells[j].dc;
         var nid = cells.length > 1 ? comp.id + '_' + j : comp.id;
-        var exportType = comp.type;
-        if (exportType === 'waterPark') exportType = 'waterSource';
-        spaces.push({id:nid, type:exportType});
+        spaces.push({id:nid, type:comp.type});
         nodeMap[r+','+c] = nid;
         positions.push({id:nid, row:r, col:c});
       }
