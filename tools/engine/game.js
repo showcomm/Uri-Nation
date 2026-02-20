@@ -1,4 +1,4 @@
-// Uri-Nation — Core Game Rules
+// Uri-Nation — Core Game Rules (v1.3.0)
 // Source of truth for all game logic. No UI dependency.
 // Used by simulator (Node) and game runner (browser) alike.
 
@@ -11,7 +11,6 @@ export const DEFAULTS = {
   swaggerPerTerritories: 2,   // +1 swagger per N connected territories
   gritPenaltyThreshold:  5,   // grit above this penalises attack rolls
   maxFortify:            3,   // max fortify tokens per territory
-  homeTurfBonus:         3,   // defender roll bonus at home
   maxTurns:              30,
   territoryWinThreshold: 10,  // non-home territories to win
   desperationThreshold:  3,   // fewer than N → desperation bonus
@@ -21,11 +20,12 @@ export const DEFAULTS = {
 
 // ---------- Player factory ----------
 
-export function createPlayer(id, archetypeKey, homeSpaceId) {
+export function createPlayer(id, archetypeKey, homeSpaceId, colour) {
   const arch = ARCHETYPES[archetypeKey];
   if (!arch) throw new Error(`Unknown archetype: ${archetypeKey}`);
   return {
     id,
+    colour,                     // blue / purple / orange / yellow
     archetype:          archetypeKey,
     position:           homeSpaceId,
     water:              arch.water,
@@ -33,6 +33,7 @@ export function createPlayer(id, archetypeKey, homeSpaceId) {
     drive:              arch.drive,
     grit:               arch.grit,
     bond:               arch.bond,
+    allies:             [],     // list of allied player ids
     zeroTerritoryTurns: 0,
     housebound:         false,
   };
@@ -50,6 +51,8 @@ export class Game {
     this.gameOver = false;
     this.winner   = null;
     this.log      = [];
+    // dogParkSpaceId → initiatorPlayerId
+    this.pendingAlliances = new Map();
   }
 
   // -------- helpers --------
@@ -130,7 +133,13 @@ export class Game {
   canChallenge(playerId, territoryId) {
     const player = this.getPlayer(playerId);
     const space  = this.board.getSpace(territoryId);
-    if (!space || space.type !== SPACE_TYPES.TERRITORY)
+
+    // Home turfs are uncapturable
+    if (!space)
+      return { ok: false, reason: 'Space not found' };
+    if (space.type === SPACE_TYPES.HOME)
+      return { ok: false, reason: 'Cannot challenge a home turf' };
+    if (space.type !== SPACE_TYPES.TERRITORY)
       return { ok: false, reason: 'Not a territory space' };
     if (space.owner === null)
       return { ok: false, reason: 'Territory is empty — use Claim' };
@@ -140,8 +149,20 @@ export class Game {
       return { ok: false, reason: 'Not enough water (need 2)' };
     if (player.drive < 1)
       return { ok: false, reason: 'Not enough drive (need 1)' };
-    if (this.board.areBondedAt(playerId, space.owner, territoryId))
-      return { ok: false, reason: 'Alliance protection — bonded players cannot challenge here' };
+
+    // Alliance protection: direct allies cannot challenge each other
+    if (this.board.areAllied(playerId, space.owner, this.players))
+      return { ok: false, reason: 'Alliance protection — allied players cannot challenge each other' };
+
+    // Alliance protection: home neighbourhood transitive check
+    if (this.board.isHomeNeighbourhood(territoryId, space.owner, this.players)) {
+      const defender = this.getPlayer(space.owner);
+      for (const allyId of defender.allies) {
+        if (this.board.areAllied(playerId, allyId, this.players)) {
+          return { ok: false, reason: 'Alliance protection — home neighbourhood' };
+        }
+      }
+    }
 
     return { ok: true, waterCost: 2, driveCost: 1 };
   }
@@ -165,13 +186,11 @@ export class Game {
     return { ok: true, waterCost: 1, gritCost: needsGrit ? 1 : 0 };
   }
 
-  canAlly(playerId, bondSpaceId) {
+  canAlly(playerId, dogParkSpaceId) {
     const player = this.getPlayer(playerId);
-    const space  = this.board.getSpace(bondSpaceId);
-    if (!space || space.type !== SPACE_TYPES.BOND)
-      return { ok: false, reason: 'Not a bond space' };
-    if (space.bondMarkers.includes(playerId))
-      return { ok: false, reason: 'Already bonded here' };
+    const space  = this.board.getSpace(dogParkSpaceId);
+    if (!space || space.type !== SPACE_TYPES.DOG_PARK)
+      return { ok: false, reason: 'Not a dog park space' };
     if (player.water < 1)
       return { ok: false, reason: 'Not enough water (need 1)' };
 
@@ -182,36 +201,16 @@ export class Game {
     return { ok: true, waterCost: 1, bondCost: needsBond ? 1 : 0 };
   }
 
-  canBreakAlliance(playerId, bondSpaceId) {
+  canBreakAlliance(playerId, alliedPlayerId) {
     const player = this.getPlayer(playerId);
-    const space  = this.board.getSpace(bondSpaceId);
-    if (!space || space.type !== SPACE_TYPES.BOND)
-      return { ok: false, reason: 'Not a bond space' };
-    if (!space.bondMarkers.includes(playerId))
-      return { ok: false, reason: 'Not bonded here' };
-    if (space.bondMarkers.length < 2)
-      return { ok: false, reason: 'No alliance to break' };
+    if (!player.allies.includes(alliedPlayerId))
+      return { ok: false, reason: 'Not allied with this player' };
     if (player.water < 1)
       return { ok: false, reason: 'Not enough water (need 1)' };
     if (player.swagger < 1)
       return { ok: false, reason: 'Not enough swagger (need 1)' };
 
     return { ok: true, waterCost: 1, swaggerCost: 1 };
-  }
-
-  canChallengeBond(playerId, bondSpaceId) {
-    const player = this.getPlayer(playerId);
-    const space  = this.board.getSpace(bondSpaceId);
-    if (!space || space.type !== SPACE_TYPES.BOND)
-      return { ok: false, reason: 'Not a bond space' };
-    if (space.bondMarkers.length === 0)
-      return { ok: false, reason: 'No markers to challenge' };
-    if (player.water < 2)
-      return { ok: false, reason: 'Not enough water (need 2)' };
-    if (player.drive < 1)
-      return { ok: false, reason: 'Not enough drive (need 1)' };
-
-    return { ok: true, waterCost: 2, driveCost: 1 };
   }
 
   canDrink(playerId) {
@@ -280,11 +279,6 @@ export class Game {
     // Defender: fortify
     defendTotal += space.fortifyTokens;
 
-    // Defender: home turf
-    if (space.type === SPACE_TYPES.HOME && space.homeOwner === defenderId) {
-      defendTotal += this.config.homeTurfBonus;
-    }
-
     // Attacker: diplomat penalty
     if (attacker.archetype === 'diplomat') {
       attackTotal -= 1;
@@ -326,15 +320,10 @@ export class Game {
     // --- apply consequences ---
     if (outcome === 'attackerWins') {
       // Defender's disk + fortify tokens go back to supply
-      const wasHome = space.type === SPACE_TYPES.HOME;
       space.owner = null;
       space.fortifyTokens = 0;
       // Challenge disk stays — caller decides whether to re-claim
       result.canReClaim = this.canReClaim(attackerId);
-      // Track home revert
-      if (wasHome) {
-        result.isHomeTurf = true;
-      }
       this._log(attackerId, `won challenge at ${territoryId} (${attackTotal} vs ${defendTotal})`);
     } else if (outcome === 'defenderWins') {
       // Attacker's pee destroyed, +1 grit to attacker
@@ -363,12 +352,6 @@ export class Game {
 
     space.owner = playerId;
 
-    // If this is a home turf, set up reversion
-    if (space.type === SPACE_TYPES.HOME && space.homeOwner && space.homeOwner !== playerId) {
-      space.revertOwner = space.homeOwner;
-      space.revertIn = 1;
-    }
-
     this._log(playerId, `re-claimed ${territoryId} with ${useResource}`);
     return { success: true };
   }
@@ -393,100 +376,128 @@ export class Game {
     return { success: true };
   }
 
-  ally(playerId, bondSpaceId) {
-    const check = this.canAlly(playerId, bondSpaceId);
+  // ================================================================
+  //  ALLIANCE — dog park bonding mechanic
+  // ================================================================
+
+  // Initiate an alliance at a dog park. Creates a pending alliance.
+  ally(playerId, dogParkSpaceId) {
+    const check = this.canAlly(playerId, dogParkSpaceId);
     if (!check.ok) return { success: false, reason: check.reason };
 
     const player = this.getPlayer(playerId);
-    const space  = this.board.getSpace(bondSpaceId);
     player.water -= check.waterCost;
     player.bond  -= check.bondCost;
-    space.bondMarkers.push(playerId);
 
-    this._log(playerId, `initiated alliance at ${bondSpaceId}`);
+    this.pendingAlliances.set(dogParkSpaceId, playerId);
+
+    this._log(playerId, `initiated alliance at ${dogParkSpaceId}`);
     return { success: true };
   }
 
-  // Compulsory bond join — triggered when passing an active bond space.
-  compulsoryBondJoin(playerId, bondSpaceId) {
+  // Compulsory bond join — triggered when a player passes through a dog park
+  // with a pending alliance initiated by another player.
+  compulsoryBondJoin(playerId, dogParkSpaceId) {
     const player = this.getPlayer(playerId);
-    const space  = this.board.getSpace(bondSpaceId);
-    if (!space || space.type !== SPACE_TYPES.BOND)
-      return { success: false, reason: 'Not a bond space' };
-    if (space.bondMarkers.length === 0)
-      return { success: false, reason: 'Bond space not active' };
-    if (space.bondMarkers.includes(playerId))
-      return { success: false, reason: 'Already bonded here' };
+
+    if (!this.pendingAlliances.has(dogParkSpaceId))
+      return { success: false, reason: 'No pending alliance here' };
+
+    const initiatorId = this.pendingAlliances.get(dogParkSpaceId);
+    if (initiatorId === playerId)
+      return { success: false, reason: 'Cannot join your own alliance' };
+    if (player.allies.includes(initiatorId))
+      return { success: false, reason: 'Already allied with initiator' };
     if (player.water < 1)
       return { success: false, reason: 'Not enough water' };
 
-    player.water -= 1;
-    space.bondMarkers.push(playerId);
+    const initiator = this.getPlayer(initiatorId);
 
-    this._log(playerId, `compulsory bond join at ${bondSpaceId}`);
-    return { success: true };
+    player.water -= 1;
+
+    // Form alliance — add to each other's allies arrays
+    if (!player.allies.includes(initiatorId))    player.allies.push(initiatorId);
+    if (!initiator.allies.includes(playerId))    initiator.allies.push(playerId);
+
+    // Clear pending
+    this.pendingAlliances.delete(dogParkSpaceId);
+
+    this._log(playerId, `joined alliance with ${initiatorId} at ${dogParkSpaceId}`);
+
+    // Friendship sacrifice: clear claims in each other's home neighbourhood
+    const cleared = [];
+
+    // Claims by initiator in joiner's home neighbourhood
+    const joinerHood = this.board.getHomeNeighbourhood(playerId, this.players);
+    for (const t of joinerHood) {
+      if (t.owner === initiatorId) {
+        t.owner = null;
+        t.fortifyTokens = 0;
+        cleared.push(t.id);
+        this._log(initiatorId, `claim cleared at ${t.id} (friendship sacrifice)`);
+      }
+    }
+
+    // Claims by joiner in initiator's home neighbourhood
+    const initiatorHood = this.board.getHomeNeighbourhood(initiatorId, this.players);
+    for (const t of initiatorHood) {
+      if (t.owner === playerId) {
+        t.owner = null;
+        t.fortifyTokens = 0;
+        cleared.push(t.id);
+        this._log(playerId, `claim cleared at ${t.id} (friendship sacrifice)`);
+      }
+    }
+
+    return { success: true, cleared };
   }
 
-  breakAlliance(playerId, bondSpaceId) {
-    const check = this.canBreakAlliance(playerId, bondSpaceId);
+  // Break an alliance. Removes both players from each other's allies.
+  breakAlliance(playerId, alliedPlayerId) {
+    const check = this.canBreakAlliance(playerId, alliedPlayerId);
     if (!check.ok) return { success: false, reason: check.reason };
 
     const player = this.getPlayer(playerId);
-    const space  = this.board.getSpace(bondSpaceId);
+    const ally   = this.getPlayer(alliedPlayerId);
+
     player.water   -= check.waterCost;
     player.swagger -= check.swaggerCost;
-    space.bondMarkers = [];
 
-    this._log(playerId, `broke alliance at ${bondSpaceId}`);
+    player.allies = player.allies.filter(id => id !== alliedPlayerId);
+    ally.allies   = ally.allies.filter(id => id !== playerId);
+
+    this._log(playerId, `broke alliance with ${alliedPlayerId}`);
     return { success: true };
   }
 
-  // Challenge a bond space (section 9.6). Defender roll is d6 + marker count.
-  payChallengeBondCost(playerId, bondSpaceId) {
-    const check = this.canChallengeBond(playerId, bondSpaceId);
-    if (!check.ok) return { success: false, reason: check.reason };
+  // ================================================================
+  //  PATH SHORTCUT
+  // ================================================================
 
+  // Take a shortcut via a PATH space. Costs 1 drive total for the whole path.
+  takeShortcut(playerId, pathEntryId) {
     const player = this.getPlayer(playerId);
-    player.water -= check.waterCost;
-    player.drive -= check.driveCost;
+    const space  = this.board.getSpace(pathEntryId);
 
-    this._log(playerId, `paid bond challenge cost for ${bondSpaceId}`);
-    return { success: true, markerCount: this.board.getSpace(bondSpaceId).bondMarkers.length };
+    if (!space || space.type !== SPACE_TYPES.PATH)
+      return { success: false, reason: 'Not a path space' };
+    if (player.position !== pathEntryId)
+      return { success: false, reason: 'Not at path entry' };
+    if (!space.pathExit)
+      return { success: false, reason: 'Path has no exit' };
+    if (player.drive < 1)
+      return { success: false, reason: 'Not enough drive (need 1)' };
+
+    player.drive -= 1;
+    player.position = space.pathExit;
+
+    this._log(playerId, `took shortcut ${pathEntryId} → ${space.pathExit}`);
+    return { success: true, exitSpaceId: space.pathExit };
   }
 
-  resolveBondChallenge(attackerId, bondSpaceId, attackRoll, defendRoll) {
-    const attacker = this.getPlayer(attackerId);
-    const space    = this.board.getSpace(bondSpaceId);
-
-    let attackTotal = attackRoll;
-    let defendTotal = defendRoll + space.bondMarkers.length;
-
-    // Diplomat penalty still applies
-    if (attacker.archetype === 'diplomat') attackTotal -= 1;
-
-    // Grit penalty still applies
-    if (attacker.grit > this.config.gritPenaltyThreshold) {
-      attackTotal -= (attacker.grit - this.config.gritPenaltyThreshold);
-    }
-
-    const result = {
-      attackRoll, defendRoll,
-      attackTotal, defendTotal,
-      markerBonus: space.bondMarkers.length,
-    };
-
-    if (attackTotal > defendTotal) {
-      result.outcome = 'attackerWins';
-      space.bondMarkers = [];
-      this._log(attackerId, `destroyed bond at ${bondSpaceId}`);
-    } else {
-      result.outcome = 'defenderWins';
-      attacker.grit += 1;
-      this._log(attackerId, `failed bond challenge at ${bondSpaceId} (+1 grit)`);
-    }
-
-    return result;
-  }
+  // ================================================================
+  //  DRINK
+  // ================================================================
 
   // Drink at a water source. waterGain comes from the Water Chance card
   // (drawn and resolved externally by the caller).
@@ -527,19 +538,31 @@ export class Game {
         effects.push({ type: 'chanceCard' });
         break;
       case SPACE_TYPES.DOG_PARK:
+        // If pending alliance by another player → compulsory join
+        if (this.pendingAlliances.has(spaceId)) {
+          const initId = this.pendingAlliances.get(spaceId);
+          const player = this.getPlayer(playerId);
+          if (initId !== playerId && player && !player.allies.includes(initId)) {
+            effects.push({ type: 'compulsoryBond', dogParkSpaceId: spaceId });
+            break;
+          }
+        }
+        // Otherwise → gain 1 bond
         effects.push({ type: 'dogPark' });
         break;
       case SPACE_TYPES.EVENTS:
         effects.push({ type: 'eventsCard' });
         break;
-      case SPACE_TYPES.BOND:
-        if (space.bondMarkers.length > 0 && !space.bondMarkers.includes(playerId)) {
-          effects.push({ type: 'compulsoryBond', bondSpaceId: spaceId });
+      case SPACE_TYPES.HOME: {
+        const player = this.getPlayer(playerId);
+        if (player && space.playerColour === player.colour) {
+          effects.push({ type: 'homeResupply' });
         }
         break;
-      case SPACE_TYPES.HOME:
-        if (space.homeOwner === playerId) {
-          effects.push({ type: 'homeResupply' });
+      }
+      case SPACE_TYPES.PATH:
+        if (space.pathExit) {
+          effects.push({ type: 'pathEntry', exitSpaceId: space.pathExit });
         }
         break;
     }
@@ -684,21 +707,6 @@ export class Game {
     }
   }
 
-  // Home turf reversion: taken homes revert to original owner after 1 turn.
-  processHomeReversions() {
-    for (const space of this.board.getSpacesByType(SPACE_TYPES.HOME)) {
-      if (space.revertIn > 0) {
-        space.revertIn -= 1;
-        if (space.revertIn === 0 && space.revertOwner) {
-          space.owner = space.revertOwner;
-          space.fortifyTokens = 0;
-          this._log(space.revertOwner, `home turf reverted at ${space.id}`);
-          space.revertOwner = null;
-        }
-      }
-    }
-  }
-
   // ================================================================
   //  TURN MANAGEMENT
   // ================================================================
@@ -707,7 +715,6 @@ export class Game {
     this.turnNumber += 1;
     this.sortTurnOrder();
     this.currentPlayerIndex = 0;
-    this.processHomeReversions();
     this._log(null, `=== Round ${this.turnNumber} ===`);
   }
 
@@ -727,8 +734,9 @@ export class Game {
       currentPlayerIndex: this.currentPlayerIndex,
       gameOver:           this.gameOver,
       winner:             this.winner,
-      players:            this.players.map(p => ({ ...p })),
+      players:            this.players.map(p => ({ ...p, allies: [...p.allies] })),
       board:              this.board.toJSON(),
+      pendingAlliances:   Object.fromEntries(this.pendingAlliances),
       log:                [...this.log],
     };
   }

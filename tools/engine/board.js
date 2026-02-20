@@ -1,29 +1,25 @@
-// Uri-Nation — Board Graph Model
+// Uri-Nation — Board Graph Model (v1.3.0)
 // The board is a graph of spaces connected by edges. Each edge can carry a drive cost.
 // Loaded from a JSON definition produced by the board builder.
-// Mutable state (ownership, fortify, bonds) lives on the spaces and is mutated by game.js.
+// Mutable state (ownership, fortify) lives on the spaces and is mutated by game.js.
 
 export const SPACE_TYPES = {
   SIDEWALK:     'sidewalk',
   TERRITORY:    'territory',
-  BOND:         'bond',
   HOME:         'home',
   WATER_SOURCE: 'waterSource',
   CHANCE_SPOT:  'chanceSpot',
   DOG_PARK:     'dogPark',
   EVENTS:       'events',
   INTERSECTION: 'intersection',
-  SIDE_STREET:  'sideStreet',
+  PATH:         'path',
 };
 
-// Default state for a space — merged on top of the definition.
+// Default mutable state for a space — merged on top of the definition.
 function defaultSpaceState() {
   return {
-    owner: null,          // player id who owns this territory/home
+    owner: null,          // player id who owns this territory
     fortifyTokens: 0,     // 0–3, only meaningful on territory spaces
-    bondMarkers: [],      // player ids with markers here (bond spaces only)
-    revertOwner: null,    // original home owner when home is taken
-    revertIn: 0,          // turns until home reverts (0 = no pending revert)
   };
 }
 
@@ -51,12 +47,12 @@ export class Board {
   addSpace(def) {
     this.spaces.set(def.id, {
       // Definition fields (immutable after load)
-      id:        def.id,
-      type:      def.type,
-      side:      def.side      || null,   // 'north' | 'south' | null
-      homeOwner: def.homeOwner || null,   // player id (home spaces only)
-      influence: def.influence || [],     // territory ids (bond spaces only)
-      label:     def.label     || def.id, // human-readable name
+      id:           def.id,
+      type:         def.type,
+      label:        def.label        || def.id,
+      facing:       def.facing       || null,   // N/S/E/W — territories and homes only
+      playerColour: def.playerColour || null,   // homes only
+      pathExit:     def.pathExit     || null,   // PATH entry spaces only — id of paired exit
       // Mutable game state
       ...defaultSpaceState(),
     });
@@ -107,6 +103,42 @@ export class Board {
     return [...this.spaces.values()];
   }
 
+  // --- Home space queries ---
+
+  // Returns the HOME space whose playerColour matches the player's colour.
+  // Requires the players array to look up the player's colour.
+  getHomeSpace(playerId, players) {
+    const player = players.find(p => p.id === playerId);
+    if (!player) return null;
+    for (const s of this.spaces.values()) {
+      if (s.type === SPACE_TYPES.HOME && s.playerColour === player.colour) return s;
+    }
+    return null;
+  }
+
+  // Returns the two TERRITORY spaces adjacent to the player's HOME space.
+  getHomeNeighbourhood(playerId, players) {
+    const home = this.getHomeSpace(playerId, players);
+    if (!home) return [];
+    return this.getNeighbors(home.id)
+      .filter(n => n.space.type === SPACE_TYPES.TERRITORY)
+      .map(n => n.space);
+  }
+
+  // Returns true if the territory is in the player's home neighbourhood.
+  isHomeNeighbourhood(territoryId, playerId, players) {
+    return this.getHomeNeighbourhood(playerId, players).some(s => s.id === territoryId);
+  }
+
+  // --- Alliance query ---
+
+  // Checks the game's alliance state. Alliances live on players (allies arrays),
+  // not on board spaces. The players array is passed in.
+  areAllied(playerIdA, playerIdB, players) {
+    const a = players.find(p => p.id === playerIdA);
+    return a ? a.allies.includes(playerIdB) : false;
+  }
+
   // --- Connected territory groups (for income + cluster rule) ---
 
   // Returns array of arrays. Each inner array is a connected component of
@@ -147,29 +179,6 @@ export class Board {
     return false;
   }
 
-  // --- Bond / alliance queries ---
-
-  // Are attackerId and defenderId both bonded at a bond space whose area
-  // of influence includes territoryId?
-  areBondedAt(attackerId, defenderId, territoryId) {
-    for (const s of this.spaces.values()) {
-      if (s.type !== SPACE_TYPES.BOND) continue;
-      if (
-        s.bondMarkers.includes(attackerId) &&
-        s.bondMarkers.includes(defenderId) &&
-        s.influence.includes(territoryId)
-      ) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  // All bond spaces with at least one marker.
-  getActiveBondSpaces() {
-    return this.getSpacesByType(SPACE_TYPES.BOND).filter(s => s.bondMarkers.length > 0);
-  }
-
   // --- Movement cost ---
 
   // Drive cost to step from one space to an adjacent space. null if not connected.
@@ -182,7 +191,7 @@ export class Board {
 
   // --- State management ---
 
-  // Wipe all mutable state (ownership, fortify, bonds) for a new game.
+  // Wipe all mutable state (ownership, fortify) for a new game.
   resetState() {
     for (const s of this.spaces.values()) {
       Object.assign(s, defaultSpaceState());
