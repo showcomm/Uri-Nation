@@ -596,12 +596,63 @@ function exportJSON() {
   var positions = [];
   var nodeMap = {}; // 'r,c' → nodeId
 
+  // ── Park cluster pass ──
+  // Parks are built from individual 1×1 cells. Adjacent cells of the same
+  // type form one game-mechanic entity, so we flood-fill to merge them into
+  // a single graph node before the main export loop.
+  var parkGrid = {};  // 'r,c' → component
+  var parkTypes = {dogPark:true, waterPark:true};
+  for (var i = 0; i < components.length; i++) {
+    var pc = components[i];
+    if (!parkTypes[pc.type]) continue;
+    var pcells = fp(pc.type, pc.rotation);
+    for (var j = 0; j < pcells.length; j++) {
+      parkGrid[(pc.row+pcells[j].dr)+','+(pc.col+pcells[j].dc)] = pc;
+    }
+  }
+  var parkVisited = {};
+  for (var i = 0; i < components.length; i++) {
+    var pc = components[i];
+    if (!parkTypes[pc.type]) continue;
+    var pcells = fp(pc.type, pc.rotation);
+    for (var j = 0; j < pcells.length; j++) {
+      var seedR = pc.row+pcells[j].dr, seedC = pc.col+pcells[j].dc;
+      var sk = seedR+','+seedC;
+      if (parkVisited[sk]) continue;
+      // Flood-fill this cluster
+      var clusterType = pc.type;
+      var clusterCells = [];
+      var stack = [{r:seedR, c:seedC}];
+      while (stack.length > 0) {
+        var cur = stack.pop();
+        var ck = cur.r+','+cur.c;
+        if (parkVisited[ck]) continue;
+        var pg = parkGrid[ck];
+        if (!pg || pg.type !== clusterType) continue;
+        parkVisited[ck] = true;
+        clusterCells.push({r:cur.r, c:cur.c});
+        stack.push({r:cur.r-1,c:cur.c},{r:cur.r+1,c:cur.c},
+                   {r:cur.r,c:cur.c-1},{r:cur.r,c:cur.c+1});
+      }
+      // Export one node for the whole cluster, using the seed component's ID
+      var exportType = clusterType === 'waterPark' ? 'waterSource' : 'dogPark';
+      var nid = pc.id;
+      spaces.push({id:nid, type:exportType});
+      for (var k = 0; k < clusterCells.length; k++) {
+        nodeMap[clusterCells[k].r+','+clusterCells[k].c] = nid;
+        positions.push({id:nid, row:clusterCells[k].r, col:clusterCells[k].c});
+      }
+    }
+  }
+
+  // ── Main component export loop ──
   for (var i = 0; i < components.length; i++) {
     var comp = components[i];
     var cells = fp(comp.type, comp.rotation);
 
-    // Roads are barriers, not nodes
+    // Roads are barriers, not nodes; parks handled above
     if (comp.type === 'road' || comp.type === 'road3') continue;
+    if (parkTypes[comp.type]) continue;
 
     if (comp.type === 'territory' || comp.type === 'home') {
       // Only yard cells become space nodes
@@ -671,16 +722,6 @@ function exportJSON() {
       positions.push({id:nid0, row:c0.r, col:c0.c});
       positions.push({id:nid0, row:cm.r, col:cm.c});
       positions.push({id:nid1, row:c2.r, col:c2.c});
-
-    } else if (comp.type === 'dogPark' || comp.type === 'waterPark') {
-      // Single graph node regardless of cell count; extra cells are visual filler.
-      var exportType = comp.type === 'waterPark' ? 'waterSource' : 'dogPark';
-      spaces.push({id:comp.id, type:exportType});
-      for (var j = 0; j < cells.length; j++) {
-        var r = comp.row + cells[j].dr, c = comp.col + cells[j].dc;
-        nodeMap[r+','+c] = comp.id;
-        positions.push({id:comp.id, row:r, col:c});
-      }
 
     } else {
       // sidewalk, intersection — each cell is a node
