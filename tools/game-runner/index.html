@@ -708,7 +708,9 @@ class Game {
         return { gameOver: true, winner: p.id, reason: 'territory threshold' };
       }
     }
-    if (this.turnNumber > 2) {
+    // Last-dog-standing: only check at end of a full round (after all players have gone)
+    // and only after round 5 to give everyone time to recover from early losses
+    if (this.turnNumber >= 5 && this.currentPlayerIndex >= this.players.length - 1) {
       const wt = this.players.filter(p => this.board.getTerritoriesOwnedBy(p.id).length > 0);
       if (wt.length === 1) {
         this.gameOver = true; this.winner = wt[0].id;
