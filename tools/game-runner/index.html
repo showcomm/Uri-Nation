@@ -1583,15 +1583,18 @@ async function runGame() {
       // Phase 3: Action
       setPhase(`${cfg.name} — Action`);
       if (cfg.isClaude) {
-        // Check if we reached the goal
+        // Check if we reached the goal (at it, or path walked through it)
         const goal = aiGoals[player.id];
-        const reached = !goal || player.position === goal.spaceId;
+        const reached = !goal || player.position === goal.spaceId || path.includes(goal.spaceId);
         if (reached) {
           aiGoals[player.id] = null; // clear goal, pick new one next turn
-          // If at home, resupply is handled in Phase 4 — no action needed
-          if (!passedHome) {
-            const available = getActionableSpaces(player);
-            if (available.flatMap(a => a.actions).length > 0) {
+        }
+        // Always take an action if one is available
+        if (!passedHome) {
+          const available = getActionableSpaces(player);
+          if (available.flatMap(a => a.actions).length > 0) {
+            if (reached) {
+              // At goal: let Claude decide
               setPhase(`${cfg.name} — Thinking...`);
               try {
                 await claudePickAction(player, cfg, available);
@@ -1600,11 +1603,10 @@ async function runGame() {
                 await aiDoAction(player, cfg);
               }
             } else {
-              addLogEntry(`  ${cfg.name}: no actions at this position.`, 'system');
+              // En route: take opportunistic actions via algorithmic AI
+              await aiDoAction(player, cfg);
             }
           }
-        } else {
-          addLogEntry(`  ${cfg.name}: en route to goal...`, 'system');
         }
       } else if (cfg.isAI) {
         await aiDoAction(player, cfg);
