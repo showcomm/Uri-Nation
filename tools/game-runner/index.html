@@ -197,7 +197,6 @@ body {
 .log-entry.action { color: #7ec850; }
 .log-entry.challenge { color: #e07040; }
 .log-entry.system { color: #4488cc; }
-.log-entry.reasoning { color: #b080d0; font-style: italic; }
 
 /* Game over overlay */
 #game-over {
@@ -235,13 +234,6 @@ body {
       <label>Players</label>
       <div class="player-count-btns" id="count-btns"></div>
       <div id="player-configs"></div>
-    </div>
-
-    <div class="setup-section" id="api-key-section" style="display:none">
-      <label>Anthropic API Key (required for Claude AI players)</label>
-      <input type="password" id="api-key-input" placeholder="sk-ant-..."
-             style="width:100%; padding:5px 8px; background:#1a1a2e; border:1px solid #555; border-radius:4px; color:#fff; font-size:12px;" />
-      <div style="font-size:11px; color:#666; margin-top:4px;">Key is stored in sessionStorage only. Never sent anywhere except the Anthropic API.</div>
     </div>
 
     <button id="btn-start" class="big-btn" disabled>Start Game</button>
@@ -360,12 +352,6 @@ class Board {
   getHomeSpace(playerId, players) {
     const player = players.find(p => p.id === playerId);
     if (!player) return null;
-    // Primary: use stored homeSpaceId (always reliable)
-    if (player.homeSpaceId) {
-      const s = this.getSpace(player.homeSpaceId);
-      if (s) return s;
-    }
-    // Fallback: match by colour
     for (const s of this.spaces.values()) {
       if (s.type === SPACE_TYPES.HOME && s.playerColour === player.colour) return s;
     }
@@ -438,7 +424,7 @@ function createPlayer(id, archetypeKey, homeSpaceId, colour) {
   const arch = ARCHETYPES[archetypeKey];
   if (!arch) throw new Error(`Unknown archetype: ${archetypeKey}`);
   return {
-    id, colour, archetype: archetypeKey, position: homeSpaceId, homeSpaceId,
+    id, colour, archetype: archetypeKey, position: homeSpaceId,
     water: arch.water, swagger: arch.swagger, drive: arch.drive, grit: arch.grit, bond: arch.bond,
     allies: [],
   };
@@ -714,9 +700,7 @@ class Game {
         return { gameOver: true, winner: p.id, reason: 'territory threshold' };
       }
     }
-    // Last-dog-standing: only check at end of a full round (after all players have gone)
-    // and only after round 5 to give everyone time to recover from early losses
-    if (this.turnNumber >= 5 && this.currentPlayerIndex >= this.players.length - 1) {
+    if (this.turnNumber > 2) {
       const wt = this.players.filter(p => this.board.getTerritoriesOwnedBy(p.id).length > 0);
       if (wt.length === 1) {
         this.gameOver = true; this.winner = wt[0].id;
@@ -975,28 +959,11 @@ function buildPlayerConfigRows(count) {
       </select>
       <select data-field="control">
         <option value="human" ${i === 0 ? 'selected' : ''}>Human</option>
-        <option value="ai">AI (Algorithmic)</option>
-        <option value="claude" ${i > 0 ? 'selected' : ''}>Claude AI</option>
+        <option value="ai" ${i > 0 ? 'selected' : ''}>AI</option>
       </select>
     `;
     container.appendChild(row);
   }
-
-  // Wire up control change listeners to show/hide API key section
-  container.querySelectorAll('[data-field="control"]').forEach(sel => {
-    sel.addEventListener('change', updateApiKeyVisibility);
-  });
-  updateApiKeyVisibility();
-
-  // Load saved API key
-  const savedKey = sessionStorage.getItem('anthropic_api_key');
-  if (savedKey) document.getElementById('api-key-input').value = savedKey;
-}
-
-function updateApiKeyVisibility() {
-  const controls = document.querySelectorAll('#player-configs [data-field="control"]');
-  const hasClaude = [...controls].some(sel => sel.value === 'claude');
-  document.getElementById('api-key-section').style.display = hasClaude ? 'block' : 'none';
 }
 
 function onStartGame() {
@@ -1010,15 +977,13 @@ function onStartGame() {
   for (let i = 0; i < rows.length; i++) {
     const name = rows[i].querySelector('[data-field="name"]').value.trim() || `Player ${i+1}`;
     const archetype = rows[i].querySelector('[data-field="archetype"]').value;
-    const controlVal = rows[i].querySelector('[data-field="control"]').value;
-    const isAI = controlVal === 'ai' || controlVal === 'claude';
-    const isClaude = controlVal === 'claude';
+    const isAI = rows[i].querySelector('[data-field="control"]').value === 'ai';
     const homeId = homes[i].id;
     const id = `p${i+1}`;
     // Read colour from the home space's playerColour field
     const homeSpace = board.getSpace(homeId);
     const colour = (homeSpace && homeSpace.playerColour) || COLOUR_ORDER[i];
-    playerConfigs.push({ id, name, archetype, isAI, isClaude, homeSpaceId: homeId, colour });
+    playerConfigs.push({ id, name, archetype, isAI, homeSpaceId: homeId, colour });
   }
 
   // Build position map from _positions
@@ -1037,10 +1002,6 @@ function onStartGame() {
       game._log(p.id, `starting claim: ${unclaimed.id}`);
     }
   }
-
-  // Save API key to sessionStorage
-  const apiKeyVal = document.getElementById('api-key-input').value.trim();
-  if (apiKeyVal) sessionStorage.setItem('anthropic_api_key', apiKeyVal);
 
   // Switch to game screen
   document.getElementById('setup-screen').style.display = 'none';
@@ -1515,39 +1476,15 @@ async function runGame() {
 
       setPhase(`${cfg.name} — Move`);
       let path;
-      if (cfg.isClaude) {
-        // Claude goal-based movement: pick a goal, then BFS toward it
-        if (!aiGoals[player.id]) {
-          setPhase(`${cfg.name} — Thinking...`);
-          try {
-            aiGoals[player.id] = await claudePickGoal(player);
-          } catch (err) {
-            console.warn('claudePickGoal failed, falling back', err);
-            addLogEntry(`  ${cfg.name}: goal pick failed (${err.message}), using algo`, 'system');
-            aiGoals[player.id] = algoPickGoal(player);
-          }
-        }
-        const goal = aiGoals[player.id];
-        if (goal) {
-          path = bfsTowardTarget(player, maxSteps, [goal.spaceId]);
-        } else {
-          path = aiComputePath(player, maxSteps);
-        }
-        for (let i = 1; i < path.length; i++) {
-          await delay(250);
-          player.position = path[i];
-          updatePawns();
-        }
-        player.position = path[0];
-      } else if (cfg.isAI) {
-        // Algorithmic AI: score-based movement
+      if (cfg.isAI) {
         path = aiComputePath(player, maxSteps);
+        // Animate AI movement step by step
         for (let i = 1; i < path.length; i++) {
           await delay(250);
-          player.position = path[i];
+          player.position = path[i]; // temp for visual
           updatePawns();
         }
-        player.position = path[0];
+        player.position = path[0]; // reset for movePlayer
       } else {
         path = await humanBuildPath(player, maxSteps);
       }
@@ -1559,8 +1496,10 @@ async function runGame() {
       updateSidebar();
 
       // Process pass-through effects
+      let passedHome = false;
       if (moveResult.success && moveResult.effects) {
         for (const eff of moveResult.effects) {
+          if (eff.type === 'homeResupply') { passedHome = true; continue; }
           if (eff.type === 'dogPark') {
             game.applyDogPark(player.id);
             addLogEntry(`${cfg.name} passed Dog Park: +1 Bond`, 'action');
@@ -1586,30 +1525,7 @@ async function runGame() {
 
       // Phase 3: Action
       setPhase(`${cfg.name} — Action`);
-      if (cfg.isClaude) {
-        // Check if we reached the goal (at it, or path walked through it)
-        const goal = aiGoals[player.id];
-        const reached = !goal || player.position === goal.spaceId || path.includes(goal.spaceId);
-        if (reached) {
-          aiGoals[player.id] = null; // clear goal, pick new one next turn
-        }
-        const available = getActionableSpaces(player);
-        if (available.flatMap(a => a.actions).length > 0) {
-          if (reached) {
-            // At goal: let Claude decide
-            setPhase(`${cfg.name} — Thinking...`);
-            try {
-              await claudePickAction(player, cfg, available);
-            } catch (err) {
-              addLogEntry(`  ${cfg.name}: Claude action error, falling back. (${err.message})`, 'system');
-              await aiDoAction(player, cfg);
-            }
-          } else {
-            // En route: take opportunistic actions via algorithmic AI
-            await aiDoAction(player, cfg);
-          }
-        }
-      } else if (cfg.isAI) {
+      if (cfg.isAI) {
         await aiDoAction(player, cfg);
       } else {
         await humanDoAction(player, cfg);
@@ -1617,20 +1533,11 @@ async function runGame() {
       clearControls();
       updateOverlay(); updatePawns(); updateSidebar();
 
-      // Phase 4: Home Resupply — check if player ended on a sidewalk
-      // adjacent to their own home (HOME spaces aren't walkable, so we
-      // must check neighbors of the final position, not the path itself)
-      {
-        const homeSpace = board.getHomeSpace(player.id, game.players);
-        if (homeSpace) {
-          const atHome = board.getNeighbors(player.position)
-            .some(n => n.space.id === homeSpace.id);
-          if (atHome) {
-            game.applyHomeResupply(player.id);
-            addLogEntry(`${cfg.name} resupplied at home`, 'action');
-            updateSidebar();
-          }
-        }
+      // Phase 4: Home Resupply
+      if (passedHome) {
+        game.applyHomeResupply(player.id);
+        addLogEntry(`${cfg.name} resupplied at home`, 'action');
+        updateSidebar();
       }
 
       // Phase 5: Win check
@@ -1662,14 +1569,11 @@ async function humanBuildPath(player, maxSteps) {
     );
     if (reachable.length === 0) break;
 
-    // Only allow ending move early at home turf or dog park
-    const allowEnd = path.length > 1 && canStopEarly(player.id, current);
-
     highlightSpaces(reachable.map(n => n.space.id));
     setControls([
       { type: 'info', text: `Steps: ${stepsLeft} | Drive: ${player.drive - accDriveCost}` },
       { type: 'spacer' },
-      allowEnd ? { type: 'button', text: 'End Move (at home/park)', value: 'end', cls: 'primary' } : null,
+      { type: 'button', text: 'End Move', value: 'end', cls: 'primary' },
       path.length > 1 ? { type: 'button', text: 'Undo', value: 'undo', cls: 'warn' } : null,
     ].filter(Boolean));
 
@@ -1898,400 +1802,10 @@ async function doChallenge(player, cfg, targetId) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-//  CLAUDE AI PLAYER
-// ═══════════════════════════════════════════════════════════════════════
-
-// ── BFS distances from a start space (walkable spaces only) ──
-
-function bfsDistances(startId) {
-  const dist = {};
-  dist[startId] = 0;
-  const queue = [startId];
-  while (queue.length > 0) {
-    const cur = queue.shift();
-    const d = dist[cur];
-    for (const n of board.getNeighbors(cur)) {
-      if (dist[n.space.id] !== undefined) continue;
-      // Record distance to ALL neighbors (so territories/homes get a distance)
-      dist[n.space.id] = d + 1;
-      // But only continue traversal through walkable spaces
-      if (WALKABLE.includes(n.space.type)) {
-        queue.push(n.space.id);
-      }
-    }
-  }
-  return dist;
-}
-
-// ── Claude goal-picking: asks Claude WHERE to go, algo handles HOW ──
-
-const aiGoals = {};  // playerId → { type, spaceId } or null
-
-async function claudePickGoal(player) {
-  const arch = ARCHETYPES[player.archetype];
-  const myName = getConfig(player.id).name;
-  const myTerritories = board.getTerritoriesOwnedBy(player.id);
-
-  // Build candidate destinations with sidewalk IDs resolved
-  const candidates = [];
-
-  // Home turf
-  const homeSpaceForGoal = board.getHomeSpace(player.id, game.players);
-  if (homeSpaceForGoal) {
-    const homeAdjacentSidewalks = board.getNeighbors(homeSpaceForGoal.id)
-      .filter(n => WALKABLE.includes(n.space.type));
-    if (homeAdjacentSidewalks.length > 0) {
-      candidates.push({
-        label: `go home (full resupply: W:${arch.water} Sw:${arch.swagger} Dr:${arch.drive} Gr:${arch.grit} Bd:${arch.bond})`,
-        type: 'home',
-        spaceId: homeAdjacentSidewalks[0].space.id
-      });
-    }
-  }
-
-  // Water sources
-  for (const ws of board.getSpacesByType(SPACE_TYPES.WATER_SOURCE)) {
-    const adj = board.getNeighbors(ws.id).filter(n => WALKABLE.includes(n.space.type));
-    if (adj.length > 0) {
-      candidates.push({
-        label: `drink at ${ws.id} (restores water to ${arch.water} only, costs 1 drive)`,
-        type: 'water',
-        spaceId: adj[0].space.id
-      });
-    }
-  }
-
-  // Unclaimed territories (closest 6)
-  const dists = bfsDistances(player.position);
-  const unclaimed = board.getAllSpaces()
-    .filter(s => s.type === SPACE_TYPES.TERRITORY && s.owner === null)
-    .map(s => {
-      const adj = board.getNeighbors(s.id).filter(n => WALKABLE.includes(n.space.type));
-      const sidewalkId = adj[0]?.space.id;
-      const dist = sidewalkId ? (dists[sidewalkId] ?? 999) : 999;
-      return { s, sidewalkId, dist };
-    })
-    .filter(x => x.sidewalkId)
-    .sort((a, b) => a.dist - b.dist)
-    .slice(0, 6);
-
-  for (const { s, sidewalkId, dist } of unclaimed) {
-    candidates.push({
-      label: `claim ${s.id} (empty territory, ~${dist} steps away)`,
-      type: 'territory',
-      spaceId: sidewalkId
-    });
-  }
-
-  // Opponent territories (closest 4, unfortified preferred)
-  const opponent = board.getAllSpaces()
-    .filter(s => s.type === SPACE_TYPES.TERRITORY && s.owner && s.owner !== player.id)
-    .map(s => {
-      const adj = board.getNeighbors(s.id).filter(n => WALKABLE.includes(n.space.type));
-      const sidewalkId = adj[0]?.space.id;
-      const dist = sidewalkId ? (dists[sidewalkId] ?? 999) : 999;
-      const ownerCfg = getConfig(s.owner);
-      return { s, sidewalkId, dist, ownerCfg };
-    })
-    .filter(x => x.sidewalkId)
-    .sort((a, b) => a.dist - b.dist)
-    .slice(0, 4);
-
-  for (const { s, sidewalkId, dist, ownerCfg } of opponent) {
-    candidates.push({
-      label: `challenge ${s.id} (owned by ${ownerCfg.name}${s.fortifyTokens ? ', fortified' : ', unfortified'}, ~${dist} steps away)`,
-      type: 'territory',
-      spaceId: sidewalkId
-    });
-  }
-
-  // Dog parks
-  for (const dp of board.getSpacesByType(SPACE_TYPES.DOG_PARK)) {
-    const adj = board.getNeighbors(dp.id).filter(n => WALKABLE.includes(n.space.type));
-    if (adj.length > 0) {
-      const hasBond = game.pendingAlliances.has(dp.id);
-      candidates.push({
-        label: `go to dog park ${dp.id} (${hasBond ? 'active bond — compulsory join costs 1 water' : 'initiate alliance costs 1 water + 1 bond'})`,
-        type: 'dogpark',
-        spaceId: adj[0].space.id
-      });
-    }
-  }
-
-  if (candidates.length === 0) throw new Error('No candidates');
-
-  const otherPlayers = game.players
-    .filter(p => p.id !== player.id)
-    .map(p => {
-      const cfg = getConfig(p.id);
-      const tc = board.getTerritoriesOwnedBy(p.id).length;
-      return `  ${cfg.name}: ${tc} territories, W:${p.water} Sw:${p.swagger} Dr:${p.drive} Gr:${p.grit}`;
-    }).join('\n');
-
-  const prompt = `You are playing Uri-Nation, a territory control board game. Choose your next destination.
-
-WIN CONDITION: First to 15 territories wins. After 30 rounds, most territories wins.
-
-TURN STRUCTURE (every turn):
-1. Territory income: +1 swagger per 3 connected territories you own.
-2. Roll 2d6 and move along sidewalks. Must use full roll (can only stop early at home or dog park).
-3. Action phase: take ONE action at your stopping position (claim, challenge, fortify, ally, drink).
-4. Home resupply: if you ended on your home sidewalk, ALL resources restore to max automatically.
-
-KEY COSTS:
-- Claim empty territory: 2 water + 1 swagger. NO swagger = CANNOT claim.
-- Challenge opponent territory: 2 water + 1 drive. Both roll 1d6, attacker must roll higher. Defender gets +1 if fortified. If you win, you still need 1 swagger OR 1 grit to convert the territory.
-- Fortify your territory: 1 water + 1 grit. Adds +1 to defender's roll (max 1 per territory).
-- Drink at water source: 1 drive. Restores water ONLY — not swagger, drive, grit, or bond.
-- Alliance at dog park: 1 water + 1 bond. Protects home neighbourhoods from allied players.
-
-RESOURCE STRATEGY:
-- Home turf restores ALL resources (water, swagger, drive, grit, bond) to your archetype max.
-- Water sources restore WATER ONLY. If you need swagger or drive, go home instead.
-- You get an action BEFORE home resupply — so you can claim a territory near home and still resupply.
-- It may take multiple turns to reach a distant destination. You will take opportunistic actions along the way.
-
-YOUR STATE:
-- ${myName} (${player.archetype}): ${myTerritories.length} territories
-- Resources: W:${player.water}/${arch.water} Sw:${player.swagger} Dr:${player.drive} Gr:${player.grit} Bd:${player.bond}
-- Round: ${game.turnNumber}/30
-
-OTHER PLAYERS:
-${otherPlayers}
-
-DESTINATIONS:
-${candidates.map((c, i) => `  ${i + 1}. ${c.label}`).join('\n')}
-
-Pick the destination that best advances your position. If swagger = 0 and grit = 0, go home. Respond JSON only:
-{
-  "choice": <number>,
-  "reasoning": "one sentence why"
-}`;
-
-  const apiKey = sessionStorage.getItem('anthropic_api_key');
-  if (!apiKey) throw new Error('No API key configured');
-
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 200,
-      messages: [{ role: 'user', content: prompt }],
-    }),
-  });
-
-  if (!resp.ok) {
-    const errText = await resp.text().catch(() => '');
-    throw new Error(`API ${resp.status}: ${errText.slice(0, 200)}`);
-  }
-  const data = await resp.json();
-  const raw = (data.content.find(b => b.type === 'text')?.text) || '';
-  const start = raw.indexOf('{');
-  const end = raw.lastIndexOf('}');
-  if (start === -1 || end === -1) throw new Error('No JSON found in response');
-  const json = JSON.parse(raw.slice(start, end + 1));
-
-  const chosen = candidates[json.choice - 1];
-  if (!chosen) throw new Error('Invalid choice index: ' + json.choice);
-
-  // Log the reasoning
-  const myNameForLog = getConfig(player.id).name;
-  addLogEntry(`[goal] ${myNameForLog} → ${chosen.label} — ${json.reasoning}`, 'reasoning');
-  game._log(player.id, `[goal] ${chosen.label} — ${json.reasoning}`);
-
-  return { type: chosen.type, spaceId: chosen.spaceId };
-}
-
-// ── Algorithmic goal fallback (mirrors scoreWalkableDest priorities) ──
-
-function algoPickGoal(player) {
-  const arch = ARCHETYPES[player.archetype];
-  const dists = bfsDistances(player.position);
-
-  // If we can't claim or challenge, go home
-  if (player.swagger === 0 && player.grit === 0 && player.water < 2) {
-    const homeSidewalks = getHomeSidewalks(player);
-    if (homeSidewalks.length > 0) return { type: 'home', spaceId: homeSidewalks[0] };
-  }
-
-  // If very low water, go home
-  if (player.water < 2 && player.swagger === 0) {
-    const homeSidewalks = getHomeSidewalks(player);
-    if (homeSidewalks.length > 0) return { type: 'home', spaceId: homeSidewalks[0] };
-  }
-
-  // Find closest unclaimed territory we can afford to claim
-  if (player.water >= 2 && player.swagger >= 1) {
-    const unclaimed = board.getAllSpaces()
-      .filter(s => s.type === SPACE_TYPES.TERRITORY && s.owner === null)
-      .map(s => {
-        const adj = board.getNeighbors(s.id).filter(n => WALKABLE.includes(n.space.type));
-        const sidewalkId = adj[0]?.space.id;
-        const dist = sidewalkId ? (dists[sidewalkId] ?? 999) : 999;
-        return { sidewalkId, dist };
-      })
-      .filter(x => x.sidewalkId)
-      .sort((a, b) => a.dist - b.dist);
-    if (unclaimed.length > 0) return { type: 'territory', spaceId: unclaimed[0].sidewalkId };
-  }
-
-  // Default: go home
-  const homeSidewalks = getHomeSidewalks(player);
-  if (homeSidewalks.length > 0) return { type: 'home', spaceId: homeSidewalks[0] };
-
-  return null;
-}
-
-// ── Claude action-only decision (movement handled by algorithmic AI) ──
-
-async function claudePickAction(player, cfg, available) {
-  const arch = ARCHETYPES[player.archetype];
-  const myName = cfg.name;
-  const myTerritories = board.getTerritoriesOwnedBy(player.id).length;
-
-  // Check if player is at home (resupply will happen after this action)
-  const homeSpace = board.getHomeSpace(player.id, game.players);
-  const atHome = homeSpace && board.getNeighbors(player.position)
-    .some(n => n.space.id === homeSpace.id);
-
-  const allActions = available.flatMap(a => a.actions);
-  const options = allActions.map(a => {
-    const target = board.getSpace(a.targetId);
-    const ownerCfg = target?.owner ? getConfig(target.owner) : null;
-    let desc = `${a.type} \u2192 ${a.targetId}`;
-    if (a.type === 'claim') desc += ` (empty territory)`;
-    if (a.type === 'challenge') desc += ` (owned by ${ownerCfg?.name}, ${target?.fortifyTokens ? 'fortified' : 'unfortified'})`;
-    if (a.type === 'fortify') desc += ` (your territory, adds +1 defence)`;
-    if (a.type === 'ally') desc += ` (dog park, protects home neighbourhoods)`;
-    if (a.type === 'drink') desc += ` (water source, refills water to ${arch.water})`;
-    if (a.type === 'shortcut') desc += ` (path shortcut)`;
-    if (a.type === 'breakAlliance') desc += ` (break alliance)`;
-    return desc;
-  }).join('\n');
-
-  const otherPlayers = game.players
-    .filter(p => p.id !== player.id)
-    .map(p => {
-      const pcfg = getConfig(p.id);
-      const tc = board.getTerritoriesOwnedBy(p.id).length;
-      return `  ${pcfg.name}: ${tc} territories, W:${p.water} Sw:${p.swagger} Dr:${p.drive} Gr:${p.grit}`;
-    }).join('\n');
-
-  const prompt = `You are playing Uri-Nation. Pick the best action from what's available.
-
-WIN CONDITION: First to 15 territories wins. After 30 rounds, most territories wins.
-
-ACTION RULES:
-- claim: 2 water + 1 swagger → place your mark on an empty territory. Expand your holdings.
-- challenge: 2 water + 1 drive → contest an opponent's territory. Both roll 1d6 — you must roll HIGHER than the defender. Defender gets +1 if fortified. 3+ connected territories = ties go to defender (cluster rule). If you win, you must spend 1 swagger OR 1 grit to convert it; otherwise territory goes empty.
-- fortify: 1 water + 1 grit → add +1 defence to your own territory (max 1 per territory). Makes challenges harder for opponents.
-- ally: 1 water + 1 bond → initiate alliance at dog park. Bonded players cannot challenge each other's home neighbourhood territories.
-- drink: 1 drive → refill water to your max (${arch.water}). Does NOT restore swagger, drive, grit, or bond.
-- none: skip action this turn.
-
-CONTEXT: ${atHome ? 'You ARE at your home sidewalk — ALL resources will restore to max AFTER this action. Spend freely!' : 'You are NOT at home. Resources you spend now are gone until you visit home.'}
-
-YOUR STATE:
-- ${myName} (${player.archetype}): ${myTerritories} territories
-- Resources: W:${player.water}/${arch.water} Sw:${player.swagger} Dr:${player.drive} Gr:${player.grit} Bd:${player.bond}
-- Round: ${game.turnNumber}/30
-
-OTHER PLAYERS:
-${otherPlayers}
-
-AVAILABLE ACTIONS (you can afford all of these):
-${options}
-
-Which action best advances your position? Respond JSON only:
-{
-  "action": "claim|challenge|fortify|ally|drink|none",
-  "actionTarget": "space id or null",
-  "reasoning": "one sentence why"
-}`;
-
-  const apiKey = sessionStorage.getItem('anthropic_api_key');
-  if (!apiKey) throw new Error('No API key configured');
-
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 300,
-      messages: [{ role: 'user', content: prompt }],
-    }),
-  });
-
-  if (!resp.ok) {
-    const errText = await resp.text().catch(() => '');
-    throw new Error(`API ${resp.status}: ${errText.slice(0, 200)}`);
-  }
-  const data = await resp.json();
-  const raw = (data.content.find(b => b.type === 'text')?.text) || '';
-  const start = raw.indexOf('{');
-  const end = raw.lastIndexOf('}');
-  if (start === -1 || end === -1) throw new Error('No JSON found in response');
-  const response = JSON.parse(raw.slice(start, end + 1));
-
-  // Log reasoning
-  if (response.reasoning) {
-    addLogEntry(`  ${cfg.name} thinks: "${response.reasoning}"`, 'reasoning');
-    game._log(player.id, `[reasoning] ${response.reasoning}`);
-  }
-
-  const { action, actionTarget } = response;
-  if (!action || action === 'pass' || action === 'none') {
-    addLogEntry(`${cfg.name} (Claude AI): passes.`, 'system');
-    return;
-  }
-
-  // Find matching action
-  let matched = null;
-  if (actionTarget) {
-    matched = allActions.find(a => a.type === action && a.targetId === actionTarget);
-  }
-  if (!matched) {
-    matched = allActions.find(a => a.type === action);
-  }
-
-  if (matched) {
-    await executeAction(player, cfg, matched);
-  } else {
-    addLogEntry(`  ${cfg.name}: "${action} ${actionTarget || ''}" not available here, skipping.`, 'system');
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════
-//  AI PLAYER — ALGORITHMIC FALLBACK (goal-directed, priority-driven)
+//  AI PLAYER (goal-directed, priority-driven)
 // ═══════════════════════════════════════════════════════════════════════
 
 const WALKABLE = ['sidewalk', 'intersection', 'sideStreet', 'path'];
-
-// A player can only stop early (before using full roll) at spaces adjacent
-// to their own home turf or a dog park.  All other stops require full roll.
-function canStopEarly(playerId, spaceId) {
-  for (const n of board.getNeighbors(spaceId)) {
-    if (n.space.type === SPACE_TYPES.DOG_PARK) return true;
-    if (n.space.type === SPACE_TYPES.HOME) {
-      const player = game.players.find(p => p.id === playerId);
-      const homeSpace = board.getHomeSpace(playerId, game.players);
-      if (homeSpace && homeSpace.id === n.space.id) return true;
-    }
-  }
-  return false;
-}
-
 const aiStuckTurns = {};   // playerId → consecutive turns stuck with no action
 const aiLastPosition = {}; // playerId → position last turn
 
@@ -2348,13 +1862,11 @@ function getHomeSidewalks(player) {
 
 function bfsTowardTarget(player, maxSteps, targetIds) {
   const reachable = bfsReachable(player, maxSteps);
-  const valid = getValidDestinations(player.id, reachable, maxSteps);
-
-  // Find the valid destination that is closest to any targetId
+  // Find the reachable space that is closest to any targetId
   let bestDest = null;
   let bestDist = Infinity;
 
-  for (const [destId] of valid) {
+  for (const [destId] of reachable) {
     if (destId === player.position) continue;
     if (targetIds.includes(destId)) {
       // We can reach the target directly
@@ -2384,38 +1896,6 @@ function bfsTowardTarget(player, maxSteps, targetIds) {
     const path = reconstructPath(reachable, bestDest);
     if (path.length > 0 && path[0] === player.position) return path;
   }
-
-  // Fallback: no valid destination found toward target. Pick the farthest
-  // reachable space (any, not just valid-stop) in the direction of the target
-  // so the player never stands still.
-  let fallbackDest = null;
-  let fallbackDist = Infinity;
-  for (const [destId] of reachable) {
-    if (destId === player.position) continue;
-    // Quick BFS distance from destId to any target
-    const visited2 = new Set([destId]);
-    const queue2 = [[destId, 0]];
-    while (queue2.length > 0) {
-      const [cur2, d2] = queue2.shift();
-      if (d2 >= fallbackDist) break;
-      if (targetIds.includes(cur2)) {
-        fallbackDist = d2;
-        fallbackDest = destId;
-        break;
-      }
-      for (const nb2 of board.getNeighbors(cur2)) {
-        if (!visited2.has(nb2.space.id)) {
-          visited2.add(nb2.space.id);
-          queue2.push([nb2.space.id, d2 + 1]);
-        }
-      }
-    }
-  }
-  if (fallbackDest) {
-    const path = reconstructPath(reachable, fallbackDest);
-    if (path.length > 0 && path[0] === player.position) return path;
-  }
-
   return [player.position];
 }
 
@@ -2472,18 +1952,6 @@ function scoreWalkableDest(player, destId, steps) {
   return score;
 }
 
-// ── Valid destinations: full roll OR early stop at home/dog park ──
-
-function getValidDestinations(playerId, reachable, maxSteps) {
-  const valid = new Map();
-  for (const [destId, info] of reachable) {
-    if (info.steps === maxSteps || canStopEarly(playerId, destId)) {
-      valid.set(destId, info);
-    }
-  }
-  return valid;
-}
-
 // ── Goal-directed AI movement ──
 
 function aiComputePath(player, maxSteps) {
@@ -2497,12 +1965,11 @@ function aiComputePath(player, maxSteps) {
   }
 
   const reachable = bfsReachable(player, maxSteps);
-  const valid = getValidDestinations(player.id, reachable, maxSteps);
 
   let bestScore = -Infinity;
   let bestDest = player.position;
 
-  for (const [destId, info] of valid) {
+  for (const [destId, info] of reachable) {
     const score = scoreWalkableDest(player, destId, info.steps);
     if (score > bestScore) {
       bestScore = score;
@@ -2518,19 +1985,6 @@ function aiComputePath(player, maxSteps) {
     }
   }
 
-  // Last resort: if best is still current position, pick any reachable space
-  // that isn't the current position so the player always moves their full roll
-  if (bestDest === player.position) {
-    for (const [destId] of valid) {
-      if (destId !== player.position) { bestDest = destId; break; }
-    }
-  }
-  if (bestDest === player.position) {
-    // Even valid is empty/only current — grab any reachable space
-    for (const [destId] of reachable) {
-      if (destId !== player.position) { bestDest = destId; break; }
-    }
-  }
   if (bestDest === player.position) return [player.position];
 
   const path = reconstructPath(reachable, bestDest);
