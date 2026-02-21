@@ -2089,12 +2089,14 @@ async function claudePlayerTurn(player, cfg, maxSteps) {
 async function executeClaudeAction(player, cfg, claudeResponse) {
   const { action, actionTarget, reasoning, plan } = claudeResponse;
 
-  // Log reasoning and plan
+  // Log reasoning and plan (to DOM and engine log for export)
   if (reasoning) {
     addLogEntry(`  ${cfg.name} thinks: "${reasoning}"`, 'reasoning');
+    game._log(player.id, `[reasoning] ${reasoning}`);
   }
   if (plan) {
     addLogEntry(`  ${cfg.name} plans: "${plan}"`, 'reasoning');
+    game._log(player.id, `[reasoning] plan: ${plan}`);
   }
 
   if (!action || action === 'pass' || action === 'none') {
