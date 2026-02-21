@@ -2020,16 +2020,28 @@ async function claudePickGoal(player) {
       return `  ${cfg.name}: ${tc} territories, W:${p.water} Sw:${p.swagger} Dr:${p.drive} Gr:${p.grit}`;
     }).join('\n');
 
-  const prompt = `You are playing Uri-Nation. Choose where to go next.
+  const prompt = `You are playing Uri-Nation, a territory control board game. Choose your next destination.
 
-GOAL: First to 15 territories wins. After 30 rounds, most territories wins.
+WIN CONDITION: First to 15 territories wins. After 30 rounds, most territories wins.
 
-KEY RULES:
-- Claiming costs 2 water + 1 swagger. If swagger = 0, you CANNOT claim — go home first.
-- Challenging costs 2 water + 1 drive. Winning also needs 1 swagger or grit to convert.
-- Home turf restores ALL resources (water, swagger, drive, grit, bond) to your max.
-- Water sources restore WATER ONLY. They do not restore swagger or drive.
-- If swagger = 0 and grit = 0, going to a water source is pointless — go home.
+TURN STRUCTURE (every turn):
+1. Territory income: +1 swagger per 3 connected territories you own.
+2. Roll 2d6 and move along sidewalks. Must use full roll (can only stop early at home or dog park).
+3. Action phase: take ONE action at your stopping position (claim, challenge, fortify, ally, drink).
+4. Home resupply: if you ended on your home sidewalk, ALL resources restore to max automatically.
+
+KEY COSTS:
+- Claim empty territory: 2 water + 1 swagger. NO swagger = CANNOT claim.
+- Challenge opponent territory: 2 water + 1 drive. Both roll 1d6, attacker must roll higher. Defender gets +1 if fortified. If you win, you still need 1 swagger OR 1 grit to convert the territory.
+- Fortify your territory: 1 water + 1 grit. Adds +1 to defender's roll (max 1 per territory).
+- Drink at water source: 1 drive. Restores water ONLY — not swagger, drive, grit, or bond.
+- Alliance at dog park: 1 water + 1 bond. Protects home neighbourhoods from allied players.
+
+RESOURCE STRATEGY:
+- Home turf restores ALL resources (water, swagger, drive, grit, bond) to your archetype max.
+- Water sources restore WATER ONLY. If you need swagger or drive, go home instead.
+- You get an action BEFORE home resupply — so you can claim a territory near home and still resupply.
+- It may take multiple turns to reach a distant destination. You will take opportunistic actions along the way.
 
 YOUR STATE:
 - ${myName} (${player.archetype}): ${myTerritories.length} territories
@@ -2039,12 +2051,12 @@ YOUR STATE:
 OTHER PLAYERS:
 ${otherPlayers}
 
-WHERE CAN YOU GO:
+DESTINATIONS:
 ${candidates.map((c, i) => `  ${i + 1}. ${c.label}`).join('\n')}
 
-Pick the destination that best advances your position. If you have no swagger and no grit, home is almost always the right answer. Respond JSON only:
+Pick the destination that best advances your position. If swagger = 0 and grit = 0, go home. Respond JSON only:
 {
-  "choice": <number from list above>,
+  "choice": <number>,
   "reasoning": "one sentence why"
 }`;
 
@@ -2135,6 +2147,11 @@ async function claudePickAction(player, cfg, available) {
   const myName = cfg.name;
   const myTerritories = board.getTerritoriesOwnedBy(player.id).length;
 
+  // Check if player is at home (resupply will happen after this action)
+  const homeSpace = board.getHomeSpace(player.id, game.players);
+  const atHome = homeSpace && board.getNeighbors(player.position)
+    .some(n => n.space.id === homeSpace.id);
+
   const allActions = available.flatMap(a => a.actions);
   const options = allActions.map(a => {
     const target = board.getSpace(a.targetId);
@@ -2158,16 +2175,19 @@ async function claudePickAction(player, cfg, available) {
       return `  ${pcfg.name}: ${tc} territories, W:${p.water} Sw:${p.swagger} Dr:${p.drive} Gr:${p.grit}`;
     }).join('\n');
 
-  const prompt = `You are playing Uri-Nation. Pick the best action to win.
+  const prompt = `You are playing Uri-Nation. Pick the best action from what's available.
 
-GOAL: Be first to 15 territories, or have most at round 30.
+WIN CONDITION: First to 15 territories wins. After 30 rounds, most territories wins.
 
-ACTION COSTS:
-- claim: 2 water + 1 swagger (place mark on empty territory)
-- challenge: 2 water + 1 drive (contest opponent's territory, both roll 1d6, attacker must roll higher, defender +1 if fortified, win requires 1 swagger OR grit to convert)
-- fortify: 1 water + 1 grit (add +1 defence to your territory, max 1)
-- ally: 1 water + 1 bond (alliance at dog park, protects home neighbourhoods)
-- drink: 1 drive (refill water to max at water source)
+ACTION RULES:
+- claim: 2 water + 1 swagger → place your mark on an empty territory. Expand your holdings.
+- challenge: 2 water + 1 drive → contest an opponent's territory. Both roll 1d6 — you must roll HIGHER than the defender. Defender gets +1 if fortified. 3+ connected territories = ties go to defender (cluster rule). If you win, you must spend 1 swagger OR 1 grit to convert it; otherwise territory goes empty.
+- fortify: 1 water + 1 grit → add +1 defence to your own territory (max 1 per territory). Makes challenges harder for opponents.
+- ally: 1 water + 1 bond → initiate alliance at dog park. Bonded players cannot challenge each other's home neighbourhood territories.
+- drink: 1 drive → refill water to your max (${arch.water}). Does NOT restore swagger, drive, grit, or bond.
+- none: skip action this turn.
+
+CONTEXT: ${atHome ? 'You ARE at your home sidewalk — ALL resources will restore to max AFTER this action. Spend freely!' : 'You are NOT at home. Resources you spend now are gone until you visit home.'}
 
 YOUR STATE:
 - ${myName} (${player.archetype}): ${myTerritories} territories
@@ -2177,12 +2197,10 @@ YOUR STATE:
 OTHER PLAYERS:
 ${otherPlayers}
 
-AVAILABLE ACTIONS RIGHT NOW (you can afford all of these):
+AVAILABLE ACTIONS (you can afford all of these):
 ${options}
 
-Or choose: none
-
-Which action best advances your position toward winning? Respond JSON only:
+Which action best advances your position? Respond JSON only:
 {
   "action": "claim|challenge|fortify|ally|drink|none",
   "actionTarget": "space id or null",
