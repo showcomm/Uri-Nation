@@ -1806,6 +1806,8 @@ async function doChallenge(player, cfg, targetId) {
 // ═══════════════════════════════════════════════════════════════════════
 
 const WALKABLE = ['sidewalk', 'intersection', 'sideStreet', 'path'];
+const aiStuckTurns = {};   // playerId → consecutive turns stuck with no action
+const aiLastPosition = {}; // playerId → position last turn
 
 // ── BFS within movement range (walkable spaces only) ──
 
@@ -1846,12 +1848,66 @@ function reconstructPath(reachable, targetId) {
   return path;
 }
 
+// ── Find the walkable sidewalk(s) adjacent to a player's home ──
+
+function getHomeSidewalks(player) {
+  const homeSpace = board.getHomeSpace(player.id, game.players);
+  if (!homeSpace) return [];
+  return board.getNeighbors(homeSpace.id)
+    .filter(n => WALKABLE.includes(n.space.type))
+    .map(n => n.space.id);
+}
+
+// ── BFS shortest path toward a target space (across full board, walkable only) ──
+
+function bfsTowardTarget(player, maxSteps, targetIds) {
+  const reachable = bfsReachable(player, maxSteps);
+  // Find the reachable space that is closest to any targetId
+  let bestDest = null;
+  let bestDist = Infinity;
+
+  for (const [destId] of reachable) {
+    if (destId === player.position) continue;
+    if (targetIds.includes(destId)) {
+      // We can reach the target directly
+      return reconstructPath(reachable, destId);
+    }
+    // BFS from destId toward targets (full graph)
+    const visited = new Set([destId]);
+    const queue = [[destId, 0]];
+    while (queue.length > 0) {
+      const [cur, d] = queue.shift();
+      if (d >= bestDist) break; // Can't improve
+      if (targetIds.includes(cur)) {
+        bestDist = d;
+        bestDest = destId;
+        break;
+      }
+      for (const nb of board.getNeighbors(cur)) {
+        if (!visited.has(nb.space.id)) {
+          visited.add(nb.space.id);
+          queue.push([nb.space.id, d + 1]);
+        }
+      }
+    }
+  }
+
+  if (bestDest) {
+    const path = reconstructPath(reachable, bestDest);
+    if (path.length > 0 && path[0] === player.position) return path;
+  }
+  return [player.position];
+}
+
 // ── Score a walkable destination by what's adjacent to it ──
 
 function scoreWalkableDest(player, destId, steps) {
   const arch = ARCHETYPES[player.archetype];
   const neighbors = board.getNeighbors(destId);
   let score = 0;
+
+  // Penalty for staying put — prefer moving somewhere new
+  if (destId === player.position) score -= 8;
 
   for (const n of neighbors) {
     const s = n.space;
@@ -1876,12 +1932,15 @@ function scoreWalkableDest(player, destId, steps) {
       else score += 2;
     }
     if (s.type === SPACE_TYPES.HOME && s.playerColour === player.colour) {
-      // Own home — resupply value
-      const deficit = (arch.water - player.water) + (arch.swagger - player.swagger) +
-                      (arch.drive - player.drive);
-      if (player.water <= 1) score += 12;
-      else if (deficit >= 3) score += 6;
-      else score += 1;
+      // Own home — resupply value (high when any resource is depleted)
+      const needsHome = player.swagger === 0 || player.water < 2 || player.drive === 0;
+      if (needsHome) score += 20;
+      else {
+        const deficit = (arch.water - player.water) + (arch.swagger - player.swagger) +
+                        (arch.drive - player.drive);
+        if (deficit >= 3) score += 6;
+        else score += 1;
+      }
     }
     if (s.type === SPACE_TYPES.DOG_PARK) {
       if (player.water >= 1 && player.bond >= 1) score += 2;
@@ -1896,6 +1955,15 @@ function scoreWalkableDest(player, destId, steps) {
 // ── Goal-directed AI movement ──
 
 function aiComputePath(player, maxSteps) {
+  // Stuck escape: if stuck for 2+ turns, force movement toward home
+  const stuck = aiStuckTurns[player.id] || 0;
+  if (stuck >= 2) {
+    const homeSidewalks = getHomeSidewalks(player);
+    if (homeSidewalks.length > 0) {
+      return bfsTowardTarget(player, maxSteps, homeSidewalks);
+    }
+  }
+
   const reachable = bfsReachable(player, maxSteps);
 
   let bestScore = -Infinity;
@@ -1909,33 +1977,11 @@ function aiComputePath(player, maxSteps) {
     }
   }
 
-  // If nothing scored well, try to move toward home
+  // If nothing scored well, move toward home sidewalk
   if (bestScore <= 0) {
-    const homeSpace = board.getHomeSpace(player.id, game.players);
-    if (homeSpace) {
-      // Find the reachable space closest to home (BFS distance)
-      let bestHomeDist = Infinity;
-      for (const [destId] of reachable) {
-        if (destId === player.position) continue;
-        // Quick BFS from destId to home
-        const visited = new Set([destId]);
-        const queue = [[destId, 0]];
-        let dist = Infinity;
-        while (queue.length > 0) {
-          const [cur, d] = queue.shift();
-          if (cur === homeSpace.id) { dist = d; break; }
-          for (const nb of board.getNeighbors(cur)) {
-            if (!visited.has(nb.space.id)) {
-              visited.add(nb.space.id);
-              queue.push([nb.space.id, d + 1]);
-            }
-          }
-        }
-        if (dist < bestHomeDist) {
-          bestHomeDist = dist;
-          bestDest = destId;
-        }
-      }
+    const homeSidewalks = getHomeSidewalks(player);
+    if (homeSidewalks.length > 0) {
+      return bfsTowardTarget(player, maxSteps, homeSidewalks);
     }
   }
 
@@ -1950,10 +1996,19 @@ function aiComputePath(player, maxSteps) {
 
 async function aiDoAction(player, cfg) {
   await delay(400);
+
+  // Track stuck state — detect position change
+  const prevPos = aiLastPosition[player.id];
+  if (player.position !== prevPos) {
+    aiStuckTurns[player.id] = 0;
+  }
+  aiLastPosition[player.id] = player.position;
+
   const actionable = getActionableSpaces(player);
   const allActions = actionable.flatMap(a => a.actions);
   if (allActions.length === 0) {
     addLogEntry(`${cfg.name} (AI): no actions available.`, 'system');
+    aiStuckTurns[player.id] = (aiStuckTurns[player.id] || 0) + 1;
     return;
   }
 
@@ -1962,30 +2017,31 @@ async function aiDoAction(player, cfg) {
   // Priority 1: Drink if water below max and a drink action is available
   if (player.water < arch.water) {
     const drink = allActions.find(a => a.type === 'drink');
-    if (drink) { await executeAction(player, cfg, drink); return; }
+    if (drink) { await executeAction(player, cfg, drink); aiStuckTurns[player.id] = 0; return; }
   }
 
   // Priority 2: Claim any available territory
   const claim = allActions.find(a => a.type === 'claim');
-  if (claim) { await executeAction(player, cfg, claim); return; }
+  if (claim) { await executeAction(player, cfg, claim); aiStuckTurns[player.id] = 0; return; }
 
   // Priority 3: Challenge an opponent territory
   const challenge = allActions.find(a => a.type === 'challenge');
-  if (challenge) { await executeAction(player, cfg, challenge); return; }
+  if (challenge) { await executeAction(player, cfg, challenge); aiStuckTurns[player.id] = 0; return; }
 
   // Priority 4: Fortify an owned territory
   const fortify = allActions.find(a => a.type === 'fortify');
-  if (fortify) { await executeAction(player, cfg, fortify); return; }
+  if (fortify) { await executeAction(player, cfg, fortify); aiStuckTurns[player.id] = 0; return; }
 
   // Priority 5: Ally at a dog park
   const ally = allActions.find(a => a.type === 'ally');
-  if (ally) { await executeAction(player, cfg, ally); return; }
+  if (ally) { await executeAction(player, cfg, ally); aiStuckTurns[player.id] = 0; return; }
 
   // Priority 6: Take a shortcut
   const shortcut = allActions.find(a => a.type === 'shortcut');
-  if (shortcut) { await executeAction(player, cfg, shortcut); return; }
+  if (shortcut) { await executeAction(player, cfg, shortcut); aiStuckTurns[player.id] = 0; return; }
 
   addLogEntry(`${cfg.name} (AI): no affordable actions.`, 'system');
+  aiStuckTurns[player.id] = (aiStuckTurns[player.id] || 0) + 1;
 }
 
 // ═══════════════════════════════════════════════════════════════════════
