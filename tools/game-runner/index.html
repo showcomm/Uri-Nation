@@ -1509,27 +1509,8 @@ async function runGame() {
 
       setPhase(`${cfg.name} — Move`);
       let path;
-      let _claudeResponse = null;
-      if (cfg.isClaude) {
-        setPhase(`${cfg.name} — Thinking...`);
-        try {
-          const result = await claudePlayerTurn(player, cfg, maxSteps);
-          path = result.path;
-          _claudeResponse = result.response;
-        } catch (err) {
-          addLogEntry(`  ${cfg.name}: Claude API error — falling back to algorithmic AI. (${err.message})`, 'system');
-          path = aiComputePath(player, maxSteps);
-          // _claudeResponse stays null — action phase will use algorithmic fallback
-        }
-        // Always animate and execute movement, even if action will fail later
-        setPhase(`${cfg.name} — Move`);
-        for (let i = 1; i < path.length; i++) {
-          await delay(250);
-          player.position = path[i];
-          updatePawns();
-        }
-        player.position = path[0]; // reset for movePlayer
-      } else if (cfg.isAI) {
+      if (cfg.isClaude || cfg.isAI) {
+        // Algorithmic movement for both AI types
         path = aiComputePath(player, maxSteps);
         // Animate AI movement step by step
         for (let i = 1; i < path.length; i++) {
@@ -1578,12 +1559,18 @@ async function runGame() {
 
       // Phase 3: Action
       setPhase(`${cfg.name} — Action`);
-      if (cfg.isClaude && _claudeResponse) {
-        await delay(800);
-        try {
-          await executeClaudeAction(player, cfg, _claudeResponse);
-        } catch (err) {
-          addLogEntry(`  ${cfg.name}: Claude action error, skipping. (${err.message})`, 'system');
+      if (cfg.isClaude) {
+        const available = getActionableSpaces(player);
+        if (available.flatMap(a => a.actions).length > 0) {
+          setPhase(`${cfg.name} — Thinking...`);
+          try {
+            await claudePickAction(player, cfg, available);
+          } catch (err) {
+            addLogEntry(`  ${cfg.name}: Claude action error, falling back. (${err.message})`, 'system');
+            await aiDoAction(player, cfg);
+          }
+        } else {
+          addLogEntry(`  ${cfg.name}: no actions at this position.`, 'system');
         }
       } else if (cfg.isAI) {
         await aiDoAction(player, cfg);
@@ -1887,180 +1874,67 @@ function bfsDistances(startId) {
   return dist;
 }
 
-// ── Reachable walkable spaces within a dice roll (thin wrapper for prompt) ──
+// ── Claude action-only decision (movement handled by algorithmic AI) ──
 
-function getReachableSpaces(player, maxSteps) {
-  const reachable = bfsReachable(player, maxSteps);
-  const result = [];
-  for (const [id, info] of reachable) {
-    result.push({ id, steps: info.steps, driveCost: info.driveCost });
-  }
-  return result;
-}
-
-function buildPrompt(player, maxSteps) {
+async function claudePickAction(player, cfg, available) {
   const arch = ARCHETYPES[player.archetype];
-  const myTerritories = board.getTerritoriesOwnedBy(player.id);
-  const allSpaces = board.getAllSpaces();
-  const myName = getConfig(player.id).name;
+  const myName = cfg.name;
+  const myTerritories = board.getTerritoriesOwnedBy(player.id).length;
 
-  // Only include territories that are claimed or reachable this turn
-  const reachable = getReachableSpaces(player, maxSteps);
-  const reachableIds = new Set(reachable.map(r => r.id));
-  const reachableNeighborIds = new Set(
-    reachable.flatMap(r => board.getNeighbors(r.id).map(n => n.space.id))
-  );
-
-  const relevantTerritories = allSpaces
-    .filter(s => s.type === SPACE_TYPES.TERRITORY &&
-      (s.owner !== null || reachableNeighborIds.has(s.id)))
-    .map(s => {
-      const ownerCfg = s.owner ? getConfig(s.owner) : null;
-      return `  ${s.id}: ${s.owner ? ownerCfg.name : 'empty'}${s.fortifyTokens ? ' (fortified)' : ''}`;
-    }).join('\n');
-
-  const waterSources = allSpaces
-    .filter(s => s.type === SPACE_TYPES.WATER_SOURCE)
-    .map(s => s.id).join(', ');
-
-  const dogParks = allSpaces
-    .filter(s => s.type === SPACE_TYPES.DOG_PARK)
-    .map(s => `${s.id}${game.pendingAlliances.has(s.id) ? ' (active bond)' : ''}`).join(', ');
-
-  const homeTurfs = game.players
-    .map(p => {
-      const cfg = getConfig(p.id);
-      const hs = board.getHomeSpace(p.id, game.players);
-      return `${cfg.name}: ${hs?.id ?? 'unknown'}`;
-    }).join(', ');
+  const allActions = available.flatMap(a => a.actions);
+  const options = allActions.map(a => {
+    const target = board.getSpace(a.targetId);
+    const ownerCfg = target?.owner ? getConfig(target.owner) : null;
+    let desc = `${a.type} \u2192 ${a.targetId}`;
+    if (a.type === 'claim') desc += ` (empty territory)`;
+    if (a.type === 'challenge') desc += ` (owned by ${ownerCfg?.name}, ${target?.fortifyTokens ? 'fortified' : 'unfortified'})`;
+    if (a.type === 'fortify') desc += ` (your territory, adds +1 defence)`;
+    if (a.type === 'ally') desc += ` (dog park, protects home neighbourhoods)`;
+    if (a.type === 'drink') desc += ` (water source, refills water to ${arch.water})`;
+    if (a.type === 'shortcut') desc += ` (path shortcut)`;
+    if (a.type === 'breakAlliance') desc += ` (break alliance)`;
+    return desc;
+  }).join('\n');
 
   const otherPlayers = game.players
     .filter(p => p.id !== player.id)
     .map(p => {
-      const cfg = getConfig(p.id);
+      const pcfg = getConfig(p.id);
       const tc = board.getTerritoriesOwnedBy(p.id).length;
-      return `  ${cfg.name} (${p.archetype}): ${tc} territories, W:${p.water} Sw:${p.swagger} Dr:${p.drive} Gr:${p.grit} Bd:${p.bond}, at ${p.position}`;
+      return `  ${pcfg.name}: ${tc} territories, W:${p.water} Sw:${p.swagger} Dr:${p.drive} Gr:${p.grit}`;
     }).join('\n');
 
-  // Home turf: find the walkable sidewalk adjacent to this player's home + BFS distance
-  const homeSpace = board.getHomeSpace(player.id, game.players);
-  const homeSidewalks = homeSpace
-    ? board.getNeighbors(homeSpace.id)
-        .filter(n => WALKABLE.includes(n.space.type))
-        .map(n => n.space.id)
-    : [];
-  const homeSidewalk = homeSidewalks[0] || null;
-  const distances = bfsDistances(player.position);
-  const homeSidewalkDist = homeSidewalk ? (distances[homeSidewalk] ?? 999) : 999;
+  const prompt = `You are playing Uri-Nation. Pick the best action to win.
 
-  const reachableList = reachable.map(r => {
-    const adj = board.getNeighbors(r.id)
-      .filter(n => [SPACE_TYPES.TERRITORY, SPACE_TYPES.HOME,
-        SPACE_TYPES.DOG_PARK, SPACE_TYPES.WATER_SOURCE].includes(n.space.type))
-      .map(n => {
-        const s = n.space;
-        if (s.type === SPACE_TYPES.TERRITORY) {
-          const ownerCfg = s.owner ? getConfig(s.owner) : null;
-          return `${s.id}(${s.owner ? ownerCfg.name : 'EMPTY'}${s.fortifyTokens ? ',fortified' : ''})`;
-        }
-        if (s.type === SPACE_TYPES.WATER_SOURCE) return `${s.id}(WATER SOURCE)`;
-        if (s.type === SPACE_TYPES.HOME) {
-          const isYours = game.players.find(
-            p2 => board.getHomeSpace(p2.id, game.players)?.id === s.id
-          )?.id === player.id;
-          return `${s.id}(${isYours ? 'YOUR HOME \u2014 full resupply' : 'opponent home'})`;
-        }
-        if (s.type === SPACE_TYPES.DOG_PARK)
-          return `${s.id}(dog park${game.pendingAlliances.has(s.id) ? ',active bond' : ''})`;
-      }).filter(Boolean).join(', ');
-    return `  ${r.id}${adj ? ': ' + adj : ''}`;
-  }).join('\n');
+GOAL: Be first to 15 territories, or have most at round 30.
 
-  return `# Uri-Nation Rules
+ACTION COSTS:
+- claim: 2 water + 1 swagger (place mark on empty territory)
+- challenge: 2 water + 1 drive (contest opponent's territory, both roll 1d6, attacker must roll higher, defender +1 if fortified, win requires 1 swagger OR grit to convert)
+- fortify: 1 water + 1 grit (add +1 defence to your territory, max 1)
+- ally: 1 water + 1 bond (alliance at dog park, protects home neighbourhoods)
+- drink: 1 drive (refill water to max at water source)
 
-You are playing Uri-Nation. Your goal is to WIN by holding the most territory.
+YOUR STATE:
+- ${myName} (${player.archetype}): ${myTerritories} territories
+- Resources: W:${player.water}/${arch.water} Sw:${player.swagger} Dr:${player.drive} Gr:${player.grit} Bd:${player.bond}
+- Round: ${game.turnNumber}/30
 
-## Win Conditions
-1. Hold 15 non-home territories at end of any turn.
-2. Last player with non-home territory.
-3. After 30 rounds: most territory wins. Ties: fortify tokens, then swagger.
-
-## The Board
-You walk on sidewalk and intersection spaces only. Territories, home turfs, dog parks, and water sources are ADJACENT to sidewalks \u2014 you never step on them, you interact from the sidewalk beside them.
-
-## Movement
-Your roll is already done (see below). Move along connected sidewalk/intersection spaces up to your roll. You can stop early or backtrack.
-
-## Resources in your dog bowl
-- Water pegs (rim) \u2014 fuel for all pee-based actions
-- Swagger, Drive, Grit, Bond tokens (centre)
-
-## Actions (at stopping position, targeting adjacent space)
-| Action | Cost | Effect |
-|--------|------|--------|
-| Claim | 2 water + 1 swagger | Mark an EMPTY adjacent territory |
-| Challenge | 2 water + 1 drive | Contest opponent's adjacent territory. Both roll 1d6 \u2014 attacker must roll higher. Defender +1 if fortified. If defender has 3+ connected territories, ties go to defender. Win: spend 1 swagger OR 1 grit to convert to your claim (if neither available, territory sits empty). Lose: +1 grit to you. |
-| Fortify | 1 water + 1 grit | Add defence to YOUR adjacent territory (max 1 token) |
-| Ally | 1 water + 1 bond | Initiate alliance at adjacent dog park. Protects both players' 2 home-adjacent territories from each other. Clears any claims either holds in other's home neighbourhood. |
-| Drink | 1 drive | At adjacent water source \u2014 tops up water to your max ONLY. Does not restore swagger/drive/grit/bond. Can happen during movement without ending your turn. |
-| None | \u2014 | No action this turn |
-
-## Home Turf \u2014 IMPORTANT
-Stopping at your home turf's adjacent sidewalk triggers FULL RESUPPLY: water AND swagger AND drive AND grit AND bond all refilled to your archetype max. This is the ONLY way to restore swagger, drive, and bond. Costs remaining movement.
-
-## Archetype Maximums
-| | Water | Swagger | Drive | Grit | Bond |
-|-|-------|---------|-------|------|------|
-| Bruiser | 6 | 3 | 2 | 2 | 1 |
-| Scrapper | 3 | 2 | 3 | 1 | 2 |
-| Diplomat | 4 | 2 | 1 | 2 | 3 |
-| Yapper | 4 | 1 | 2 | 3 | 2 |
-
-## Territory Income
-Start of each turn: +1 swagger per 3 connected territories you own.
-
----
-
-# Game State \u2014 Round ${game.turnNumber} of 30
-
-**Claimed and reachable territories:**
-${relevantTerritories || '  none near you'}
-
-**Water sources (board-wide):** ${waterSources}
-**Dog parks:** ${dogParks}
-**Home turfs:** ${homeTurfs}
-
-**Other players:**
+OTHER PLAYERS:
 ${otherPlayers}
 
----
+AVAILABLE ACTIONS RIGHT NOW (you can afford all of these):
+${options}
 
-# Your Turn \u2014 ${myName} (${player.archetype})
+Or choose: none
 
-Resources: Water:${player.water}/${arch.water} Swagger:${player.swagger} Drive:${player.drive} Grit:${player.grit} Bond:${player.bond}
-Territories (${myTerritories.length}): ${myTerritories.map(t => t.id).join(', ') || 'none'}
-Position: ${player.position}
-Your home turf: ${homeSpace?.id ?? 'unknown'}, accessible from ${homeSidewalk || 'unknown'} (stop here to resupply everything)
-Distance to your home turf sidewalk: ${homeSidewalkDist} steps
-Roll: ${maxSteps} steps this turn
-Allies: ${player.allies?.length > 0 ? player.allies.map(id => getConfig(id).name).join(', ') : 'none'}
-
-**Spaces reachable this turn:**
-${reachableList || '  none'}
-
-Decide your best move to win the game. Consider what you can afford now and what you need to set up for future turns. If swagger is 0, you cannot claim \u2014 your priority should be reaching your home turf to resupply.
-
-Respond with JSON only:
+Which action best advances your position toward winning? Respond JSON only:
 {
-  "moveTo": "id from reachable list above",
   "action": "claim|challenge|fortify|ally|drink|none",
   "actionTarget": "space id or null",
-  "plan": "next 2-3 turn strategy",
-  "reasoning": "why this maximises your territory"
+  "reasoning": "one sentence why"
 }`;
-}
 
-async function callClaudeAPI(messages) {
   const apiKey = sessionStorage.getItem('anthropic_api_key');
   if (!apiKey) throw new Error('No API key configured');
 
@@ -2074,8 +1948,8 @@ async function callClaudeAPI(messages) {
     },
     body: JSON.stringify({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 512,
-      messages,
+      max_tokens: 300,
+      messages: [{ role: 'user', content: prompt }],
     }),
   });
 
@@ -2084,73 +1958,25 @@ async function callClaudeAPI(messages) {
     throw new Error(`API ${resp.status}: ${errText.slice(0, 200)}`);
   }
   const data = await resp.json();
-  return data.content[0].text;
-}
-
-function getActionsAtPosition(player, spaceId) {
-  const savedPos = player.position;
-  player.position = spaceId;
-  const actions = getActionableSpaces(player);
-  player.position = savedPos;
-  return actions;
-}
-
-function parseClaudeResponse(text) {
-  // Extract outermost {...} block regardless of surrounding prose
-  const raw = (text || '').trim();
+  const raw = (data.content.find(b => b.type === 'text')?.text) || '';
   const start = raw.indexOf('{');
   const end = raw.lastIndexOf('}');
   if (start === -1 || end === -1) throw new Error('No JSON found in response');
-  return JSON.parse(raw.slice(start, end + 1));
-}
+  const response = JSON.parse(raw.slice(start, end + 1));
 
-async function claudePlayerTurn(player, cfg, maxSteps) {
-  // Build prompt (computes reachable internally)
-  const promptText = buildPrompt(player, maxSteps);
-  const messages = [{ role: 'user', content: promptText }];
-
-  // Call Claude API
-  const rawResponse = await callClaudeAPI(messages);
-  const response = parseClaudeResponse(rawResponse);
-
-  // Validate moveTo against BFS reachable
-  const reachable = bfsReachable(player, maxSteps);
-  const moveTo = response.moveTo;
-  if (!moveTo || !reachable.has(moveTo)) {
-    throw new Error(`Invalid moveTo: ${moveTo}`);
+  // Log reasoning
+  if (response.reasoning) {
+    addLogEntry(`  ${cfg.name} thinks: "${response.reasoning}"`, 'reasoning');
+    game._log(player.id, `[reasoning] ${response.reasoning}`);
   }
 
-  // Build path
-  const path = reconstructPath(reachable, moveTo);
-  if (path.length === 0 || path[0] !== player.position) {
-    throw new Error(`Path reconstruction failed for ${moveTo}`);
-  }
-
-  return { path, response };
-}
-
-async function executeClaudeAction(player, cfg, claudeResponse) {
-  const { action, actionTarget, reasoning, plan } = claudeResponse;
-
-  // Log reasoning and plan (to DOM and engine log for export)
-  if (reasoning) {
-    addLogEntry(`  ${cfg.name} thinks: "${reasoning}"`, 'reasoning');
-    game._log(player.id, `[reasoning] ${reasoning}`);
-  }
-  if (plan) {
-    addLogEntry(`  ${cfg.name} plans: "${plan}"`, 'reasoning');
-    game._log(player.id, `[reasoning] plan: ${plan}`);
-  }
-
+  const { action, actionTarget } = response;
   if (!action || action === 'pass' || action === 'none') {
     addLogEntry(`${cfg.name} (Claude AI): passes.`, 'system');
     return;
   }
 
-  // Find matching action from current actionable spaces
-  const actionable = getActionableSpaces(player);
-  const allActions = actionable.flatMap(a => a.actions);
-
+  // Find matching action
   let matched = null;
   if (actionTarget) {
     matched = allActions.find(a => a.type === action && a.targetId === actionTarget);
@@ -2161,11 +1987,8 @@ async function executeClaudeAction(player, cfg, claudeResponse) {
 
   if (matched) {
     await executeAction(player, cfg, matched);
-  } else if (allActions.length > 0) {
-    // Claude chose an unavailable action — try the same type without target match
-    addLogEntry(`  ${cfg.name}: "${action} ${actionTarget || ''}" not available here, skipping action.`, 'system');
   } else {
-    addLogEntry(`  ${cfg.name}: no actions at this position.`, 'system');
+    addLogEntry(`  ${cfg.name}: "${action} ${actionTarget || ''}" not available here, skipping.`, 'system');
   }
 }
 
