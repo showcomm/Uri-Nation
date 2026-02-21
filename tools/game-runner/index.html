@@ -1519,8 +1519,9 @@ async function runGame() {
         } catch (err) {
           addLogEntry(`  ${cfg.name}: Claude API error — falling back to algorithmic AI. (${err.message})`, 'system');
           path = aiComputePath(player, maxSteps);
+          // _claudeResponse stays null — action phase will use algorithmic fallback
         }
-        // Animate movement step by step
+        // Always animate and execute movement, even if action will fail later
         setPhase(`${cfg.name} — Move`);
         for (let i = 1; i < path.length; i++) {
           await delay(250);
@@ -1582,8 +1583,7 @@ async function runGame() {
         try {
           await executeClaudeAction(player, cfg, _claudeResponse);
         } catch (err) {
-          addLogEntry(`  ${cfg.name}: Claude action error — falling back. (${err.message})`, 'system');
-          await aiDoAction(player, cfg);
+          addLogEntry(`  ${cfg.name}: Claude action error, skipping. (${err.message})`, 'system');
         }
       } else if (cfg.isAI) {
         await aiDoAction(player, cfg);
@@ -2080,12 +2080,12 @@ function getActionsAtPosition(player, spaceId) {
 }
 
 function parseClaudeResponse(text) {
-  // Strip markdown code fences if present
-  let cleaned = text.trim();
-  if (cleaned.startsWith('```')) {
-    cleaned = cleaned.replace(/^```(?:json)?\s*/, '').replace(/\s*```$/, '');
-  }
-  return JSON.parse(cleaned);
+  // Extract outermost {...} block regardless of surrounding prose
+  const raw = (text || '').trim();
+  const start = raw.indexOf('{');
+  const end = raw.lastIndexOf('}');
+  if (start === -1 || end === -1) throw new Error('No JSON found in response');
+  return JSON.parse(raw.slice(start, end + 1));
 }
 
 async function claudePlayerTurn(player, cfg, maxSteps) {
@@ -2146,11 +2146,10 @@ async function executeClaudeAction(player, cfg, claudeResponse) {
   if (matched) {
     await executeAction(player, cfg, matched);
   } else if (allActions.length > 0) {
-    // Claude chose an invalid action — fall back to first available
-    addLogEntry(`  ${cfg.name}: Claude chose unavailable action "${action}", using fallback.`, 'system');
-    await executeAction(player, cfg, allActions[0]);
+    // Claude chose an unavailable action — try the same type without target match
+    addLogEntry(`  ${cfg.name}: "${action} ${actionTarget || ''}" not available here, skipping action.`, 'system');
   } else {
-    addLogEntry(`${cfg.name} (Claude AI): no actions available.`, 'system');
+    addLogEntry(`  ${cfg.name}: no actions at this position.`, 'system');
   }
 }
 
