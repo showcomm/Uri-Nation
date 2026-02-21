@@ -1,13 +1,13 @@
 # Uri-Nation — Game Design Document
 
-**Version:** 1.3.0
-**Date:** 2026-02-19
+**Version:** 1.4.0
+**Date:** 2026-02-21
 
 ---
 
 ## 1. Concept
 
-Uri-Nation is a 2–4 player neighbourhood territory control game where each player is a dog on a walk. Players mark territory with urine, challenge other dogs' claims, form alliances, and try to dominate the neighbourhood — or push opponents back to their own backyards.
+Uri-Nation is a 2–4 player neighbourhood territory control game where each player is a dog on a walk. Players mark territory with urine, challenge other dogs' claims, form alliances at dog parks, and try to dominate the neighbourhood.
 
 Grounded in real canine chemical communication research (dogs really do encode identity, status, stress, and social intent in urine chemistry). Presented with accessible, humorous mechanics.
 
@@ -15,485 +15,271 @@ Grounded in real canine chemical communication research (dogs really do encode i
 
 ## 2. Core Design Principles
 
-- **Same actions for everyone.** Every archetype can Claim, Challenge, Fortify, Ally, and use shortcuts. No exclusive abilities. Differentiation is through cost discounts, modifier maxes, and board economy.
-- **Open information.** All claims are visible. Fortify tokens are visible. Bond space alliances are visible. No hidden state to track.
-- **No decay.** Marks stay permanently until challenged off. No bookkeeping for mark aging.
-- **Everything is physical tokens.** No cards for resources. Bones, sticks, hearts, grit tokens, water pegs — all tactile pieces you collect, store in your bowl, and spend.
+- **Same actions for everyone.** Every archetype can Claim, Challenge, Fortify, Ally, and use shortcuts. No exclusive abilities. Differentiation is through starting resources only.
+- **Open information.** All claims are visible. Fortify tokens are visible. Alliance markers are visible. No hidden state.
+- **No decay.** Marks stay permanently until challenged off.
+- **Everything is physical tokens.** Bones, sticks, hearts, grit tokens, water pegs — all tactile pieces stored in the player's dog bowl.
 - **Pee = water. Modifiers = intent.** Actions that place pee disks cost water (removed from bowl rim) plus a modifier token. The water IS the pee. The modifier determines what the pee does.
-- **Defense is strong.** Claims are hard to dislodge. Fortify and clustering make territories progressively more secure. Offense requires real commitment.
-- **No basic income.** The board IS the economy. Territory holdings generate swagger. Chance spots generate drive. The dog park generates bond. Grit accumulates from conflict. Home gives a full resupply but takes you away from the action.
-- **Bonding is friendship, not geography.** Alliances form at dog parks and protect each bonded player's home neighbourhood — the two territories adjacent to their home turf. Bonding requires giving up any claims you hold in your ally's neighbourhood. Real friendship means you don't keep your foot on their lawn.
+- **Defense is strong.** Claims are hard to dislodge. Fortify and clustering make territories progressively more secure.
+- **No basic income.** The board IS the economy. Territory holdings generate swagger. Dog parks generate bond. Water sources refill water. Home gives a full resupply but costs you your remaining movement.
+- **Sidewalk only.** Players never step onto special spaces. All interaction happens from the adjacent sidewalk.
 - **The leash is the joke.** You're a dog on a leash trying to execute grand strategy while being walked by an oblivious owner.
 
 ---
 
 ## 3. The Board
 
-### 3.1 Board Topology — The Neighbourhood Grid
+### 3.1 Board Topology
 
-The board represents a neighbourhood of city blocks arranged in a grid. Roads run horizontally and vertically between blocks. Each block face has a sidewalk running along it, with residential properties (yard + driveway + house) fronting the sidewalk. Players walk along sidewalks.
+The board represents a neighbourhood of city blocks. Roads run between blocks. Sidewalks run along each block face. Players walk along sidewalks only.
 
-**Sidewalks** — Run along each block face. Players walk freely along sidewalks. Territory spaces (driveways) branch directly off the sidewalk.
+All special spaces (territories, home turfs, dog parks, water sources, paths) are adjacent to sidewalk spaces. Players interact with them from the sidewalk — they never occupy these spaces directly.
+
+**Sidewalks** — The movement layer. Players walk freely between connected sidewalk spaces.
 
 **Roads** — Barriers between blocks. Cannot be walked along. Can be crossed:
-- **Free at intersections.** Your owner naturally crosses at corners. No cost.
-- **Mid-block crossing costs 1 Drive token.** You're dragging your owner across traffic. Can happen mid-roll.
+- **Free at intersections.**
+- **Mid-block crossing costs 1 Drive token.** Movement continues after crossing.
 
-**Intersections** — Where roads meet. Free crossing points in any direction. High-traffic strategic positions.
-
-**Home turfs** — One per player, placed at non-corner positions on the board (corners are excluded — each home needs two neighbouring properties for the bonding mechanic to function). Each home turf is a distinct coloured property.
+**Intersections** — Where roads meet. Free crossing in any direction.
 
 ### 3.2 Space Types
 
-**Territory spaces** — Residential properties along the sidewalks: yard, driveway, house. The driveway is the claimable spot — players place large pee disks there. Each territory can hold one large pee disk and up to 3 fortify tokens (small pee disks).
+**Territory** — Residential properties: yard, driveway, house. Claimed from the adjacent sidewalk. Each territory holds 1 large pee disk (claim) and 1 small pee disk (fortify token).
 
-**🏠 Home Turf** — One per player, fixed position on the board. Cannot be captured. Passing through triggers full resupply (water + all modifiers to archetype max). Worth 0 VP. Must be placed at a non-corner position so it has exactly two neighbouring territory spaces.
+**🏠 Home Turf** — One per player. Cannot be captured. Passing the adjacent sidewalk triggers full resupply, but the player must stop and forfeit remaining movement. Each home turf has exactly two adjacent territory spaces — the player's home neighbourhood. Placed at non-corner positions on the board.
 
-**🐕 Dog Park** — 1–2 locations on the board. The only place alliances can be initiated. Pass through to receive 1 Bond token. First player to place a bond marker here sets the alliance trap — others who pass must compulsory-join.
+**Paths** — Shortcut routes between two sidewalk spaces. When a player passes the entry sidewalk, they instantly move to the exit sidewalk and continue moving for remaining steps (snakes and ladders style).
 
-**💧 Water Sources** — Scattered around the board. Puddles, garden taps, ditches. Drinking costs 1 Drive (Scrapper: free) and triggers a Water Chance deck draw.
+**🐕 Dog Park** — Where alliances form. Passing the adjacent sidewalk gives 1 Bond token. If an active bond marker is present, passing triggers compulsory join. A player can stop here to initiate an alliance, ending their movement.
 
-**🎲 Chance Spots** — Garbage bins, café scraps, interesting smells. Pass through to draw a Chance card. Primary source of Drive tokens during play.
+**💧 Water Sources** — Passing the adjacent sidewalk lets a player optionally drink. Costs 1 Drive (Scrapper: free). Tops up water to archetype max. Movement continues.
 
-**📰 Neighbourhood Events** — 1 location. Draw an Events card when passing through.
+**🎲 Chance Spots / Events** — Not yet implemented.
 
-### 3.3 Adjacency and Connected Territories
+### 3.3 Adjacency and the Cluster Rule
 
-Territory spaces that share a sidewalk segment are adjacent. Adjacency matters for two rules:
+Territory spaces that share a sidewalk segment are adjacent. A connected group of 3 or more territories all owned by the same player triggers the **Cluster Rule**: ties in challenges go to the defender instead of re-rolling.
 
-**The Cluster Rule:** If the defender holds **3 or more connected friendly territories** (including the one being challenged), **ties go to the defender** instead of triggering a re-roll.
+### 3.4 Home Neighbourhood
 
-**Home neighbourhood:** The two territory spaces immediately adjacent to a player's home turf on the same block face are that player's home neighbourhood. These are the spaces protected by alliances and cleared when bonding.
-
-### 3.4 Bonding — Home Neighbourhood Alliances
-
-Alliances form at dog parks and protect each bonded player's **home neighbourhood** — the two territory spaces adjacent to their home turf.
-
-**What the alliance protects:**
-Neither bonded player can challenge the other's claims anywhere in either player's home neighbourhood for the duration of the alliance. This is a mutual non-aggression pact around both homes.
-
-**What bonding costs:**
-When a bond forms between two players, **any claims either player holds in the other's home neighbourhood are immediately cleared** — returned to empty, unowned. This is the price of friendship. You cannot hold your ally's lawn while claiming to be their friend.
-
-**The cleared properties** sit empty and protected for the duration of the alliance. Neither bonded player can claim them. Other (non-bonded) players can claim them freely — the protection only applies between the two bonded players.
-
-**Breaking the alliance** (1 water + 1 swagger) destroys the bond stack. All protections end immediately. Both players' home neighbourhoods are open for challenges again, including from the formerly bonded players.
-
-**Strategic texture:**
-- Bond early (before anyone claims your neighbourhood) and it costs nothing but the token.
-- Bond late (after the opponent has claimed your neighbours) and you force them to give up those claims.
-- Third players can exploit the cleared properties while bonded players can't respond.
-- Breaking a bond is a declaration of war — you're signalling you're coming for their neighbourhood.
-
-### 3.5 Movement Rules
-
-- **Direction is free.** Choose which direction to walk each turn. You can backtrack.
-- **Sidewalks are free.** Walk in any direction along any connected sidewalk.
-- **Intersections are free crossings.** Cross any road at an intersection at no cost.
-- **Mid-block crossing costs 1 Drive.** Cross a road between intersections by spending 1 Drive token. Can happen mid-roll.
-- **Can stop early.** Don't have to use your full roll.
+The two territory spaces immediately adjacent to a player's home turf are their **home neighbourhood**. This is what alliance protection covers, and what gets cleared when bonding.
 
 ---
 
-## 4. Resources — All Physical Tokens
+## 4. Resources
 
-All resources are physical tokens stored in or around the player's dog bowl. No cards for resources.
+### 4.1 Water Pegs (around bowl rim)
 
-### 4.1 Water Pegs 💧 (blue pegs, around bowl rim)
+Bladder capacity. The universal fuel for all pee-based actions.
 
-Bladder capacity. Water is what makes pee — large pee actions cost 2 water, small pee actions cost 1 water. The universal fuel.
+- Large pee actions cost 2 water.
+- Small pee actions cost 1 water.
+- Refilled to full at Home Turf (costs remaining movement).
+- Topped up at Water Sources (costs 1 Drive, Scrapper: free).
 
-- Refilled to full at Home Turf (free).
-- Refilled variably at Water Sources (costs 1 Drive token, draw Water Chance card).
-- Scrapper drinks free (no Drive cost).
+### 4.2 Modifier Tokens (in bowl centre)
 
-### 4.2 Modifier Tokens (stored in bowl centre)
+| Token | Shape | Role |
+|-------|-------|------|
+| **Swagger** 💪 | Bone | Territorial confidence. Spent on Claims, re-claims, breaking alliances. |
+| **Drive** ⚡ | Stick | Energy. Spent on Challenges, road crossings, shortcuts, drinking. |
+| **Grit** 🦴 | TBD | Defensive resolve. Spent on Fortify and re-claims. Accumulates from losing challenges. |
+| **Bond** 🤝 | Heart | Social connection. Spent on initiating alliances. |
 
-Four types of modifier tokens, each with a distinct physical shape:
+### 4.3 Archetype Starting Resources
 
-| Token | Icon | Shape | Role |
-|-------|------|-------|------|
-| **Swagger** 💪 | Bone | Small bone shape | Territorial confidence. Modifier for Claims, re-claims, breaking alliances. |
-| **Drive** ⚡ | Stick | Small stick shape | Energy and aggression. Modifier for Challenges, road crossings, shortcuts, drinking. |
-| **Grit** 🦴 | TBD | TBD | Defensive resolve. Modifier for Fortify and re-claims. The hackles-up, planted-feet stance. |
-| **Bond** 🤝 | Heart | Small heart shape | Social connection. Modifier for initiating an Ally bond. |
+Each archetype has one strength (3), two middling (2), and one weakness (1) across the four modifiers. Total always 8.
 
-**Note on Grit:** Working name. Represents the stiff-legged, low-growl defensive posture — not aggressive (that's Drive), not confident (that's Swagger), just stubborn refusal to move. Other candidates: Bark, Stand, Bristle, Guard, Feisty. Final name TBD.
+| Archetype | Water | Swagger | Drive | Grit | Bond |
+|-----------|-------|---------|-------|------|------|
+| Bruiser   | 6     | 3       | 2     | 2    | 1    |
+| Scrapper  | 3     | 2       | 3     | 1    | 2    |
+| Diplomat  | 4     | 2       | 1     | 2    | 3    |
+| Yapper    | 4     | 1       | 2     | 3    | 2    |
 
-### 4.3 Pee Disks (two sizes)
+Home resupply refills to these values. Board pickups can push above them — the archetype max is a soft cap for home resupply only.
 
-Pee disks are coloured markers that go straight from the shared supply to the board when you take an action. They are never stored in your bowl — pee belongs on the board, not in a dish. The water cost is paid at the moment you take the action (remove pegs from your bowl rim).
+### 4.4 Pee Disks
 
-**Large pee disk** — Puddle-shaped disk in player colour. Placed on the board when you Claim or Challenge (costs 2 water pegs from your bowl rim, plus a modifier token).
+Pee disks go from the shared supply straight to the board. Never stored in the bowl.
 
-**Small pee disk** — Smaller puddle-shaped disk in player colour. Placed on the board when you Fortify or at a Dog Park when initiating/joining an alliance (costs 1 water peg, plus a modifier token). Also used as compulsory bond markers (provided from the bank when passing an active dog park, costs 1 water).
-
-### 4.4 Modifier Token Maxes by Archetype
-
-Home refills modifier tokens **up to your archetype max.** Board pickups (chance cards, dog park, territory bonuses) can push you above your home max — the max is a soft cap for home resupply only.
-
-| Archetype | Swagger | Drive | Grit | Bond | Total |
-|-----------|---------|-------|------|------|-------|
-| Bruiser   | 3       | 2     | 2    | 1    | 8     |
-| Scrapper  | 2       | 3     | 1    | 2    | 8     |
-| Diplomat  | 2       | 1     | 2    | 3    | 8     |
-| Yapper    | 1       | 2     | 3    | 2    | 8     |
-
-Each archetype has one strength (3), two middling (2), and one weakness (1). Total always 8.
-
-**Weakness creates identity:**
-- Bruiser (1 Bond): natural loner, worst at alliances
-- Scrapper (1 Grit): fast but fragile, can't stockpile fortifications from home
-- Diplomat (1 Drive): dependent on allies, can't roam freely
-- Yapper (1 Swagger): terrible at claiming, must turtle and wait
-
-**Discounts compensate:**
-- Bruiser doesn't need swagger to claim → 3 swagger is pure surplus for re-claims and breaking alliances
-- Scrapper drinks free → 3 Drive all goes to shortcuts and challenges
-- Diplomat doesn't need bond to initiate alliances → 3 bond is pure surplus
-- Yapper doesn't need grit to fortify → 3 grit all goes to re-claims
+- **Large pee disk** — Claim or Challenge. Costs 2 water.
+- **Small pee disk** — Fortify or Alliance marker. Costs 1 water.
 
 ---
 
-## 5. The Dog Bowl
+## 5. Archetypes
 
-Each player's personal dashboard is an oversized dog bowl, unique to their archetype.
+All archetypes roll **2d6** for movement and can take every action. Differentiation is starting resources only — no in-game action discounts.
 
-### 5.1 Physical Design
+**The Bruiser** 🐕‍🦺 — *Big. Confident. Marks like it owns the place.*
+High water (6) and swagger (3). Low bond (1) — a natural loner. Steamrolls through early claiming.
 
-- **Peg holes around the rim** — for water pegs (blue) only. Represent bladder capacity. Remove pegs when taking pee-based actions (2 for large pee actions, 1 for small). Refill by drinking or passing home.
-- **Centre dish** — holds all modifier tokens (swagger bones, drive sticks, grit tokens, bond hearts). Pee disks are kept in a shared supply, not in the bowl.
-- **Colour-coded** to match player colour.
-- Each breed's bowl styled differently (Bruiser: chunky/oversized, Scrapper: small/shallow, Diplomat: elegant, Yapper: jagged rim). Art direction TBD.
+**The Scrapper** 🐕 — *Small. Fast. Everywhere at once.*
+High drive (3). Tiny bladder (3 water) — must manage resources carefully. Spreads wide and thin.
 
-### 5.2 Bowl Configurations by Archetype
+**The Diplomat** 🦮 — *Medium. Friendly. Everyone's best friend.*
+High bond (3). Low drive (1) — can't roam far. Relies on alliances for protection.
 
-| Archetype | Water Peg Holes |
-|-----------|----------------|
-| Bruiser   | 6              |
-| Scrapper  | 3              |
-| Diplomat  | 4              |
-| Yapper    | 4              |
+**The Yapper** 🐩 — *Small. Loud. Annoying to mess with.*
+High grit (3). Low swagger (1) — struggles to claim early. Takes territory through challenges, then digs in.
 
 ---
 
-## 6. Economy — The Board as Income
+## 6. Economy
 
-There is **no basic income per turn.** All resources come from the board.
+There is no basic income per turn. All resources come from the board.
 
-### 6.1 Income Sources
+**Home Turf** — Full resupply to archetype max. Costs remaining movement for that turn.
 
-**Home Turf (full resupply):**
-- Refill water pegs to full.
-- Refill all modifier tokens to archetype max.
-- Strategic trade-off: home is safe but takes you away from the action.
+**Territory Holdings** — +1 Swagger per 3 connected territories, collected at start of your turn.
 
-**Territory Holdings (swagger):**
-- +1 Swagger token per 2–3 connected territories held, collected at start of your turn.
-- The more you own, the more confident you are. Own nothing, get nothing.
+**Dog Park** — 1 Bond token when passing the adjacent sidewalk.
 
-**Chance Spots (primarily drive, mixed others):**
-- Draw a Chance card when passing through.
-- Most common: Drive tokens (found food/energy).
-- Less common: Swagger, Grit tokens.
-- Rare: Bond tokens.
-- Some cards have mixed outcomes (e.g., eat a rotten bone: −1 water, +1 grit).
+**Water Sources** — Top up water to archetype max. Costs 1 Drive (Scrapper: free).
 
-**Dog Park (bond):**
-- Receive 1 Bond token when passing through.
-- The only place alliances can be initiated.
+**Conflict** — Lose a challenge: +1 Grit to the attacker.
 
-**Water Sources (water):**
-- Draw Water Chance card. Costs 1 Drive (Scrapper free).
+**Chance Spots / Events** — Not yet implemented. Intended to be the primary source of Drive tokens during play.
 
-**Conflict (grit — involuntary):**
-- Lose a challenge: +1 Grit.
-- Challenge a Yapper: +1 Grit (win or lose).
-- Bad water draws: +1 or +2 Grit.
-- Desperation bonus (fewer than 3 territories): +2 Grit.
+### Economic Rhythm
 
-### 6.2 Economic Rhythm
-
-Early game: near home, well-supplied, claiming nearby territories. Mid game: pushing out, crossing roads, scrounging chance spots for drive. Late game: torn between holding distant territory and trekking home for a refill. Every walk is a supply run — route planning is resource planning.
-
-### 6.3 Why No Basic Income Works
-
-Without a safety net, every resource matters. You can't turtle at home collecting free tokens — home gives you a fixed max and then you have to go spend them. Territory isn't just VP — it's your swagger engine.
+Early game: near home, well-supplied, claiming nearby territories. Mid game: pushing out, crossing roads, managing drive for crossings and drinking. Late game: torn between holding distant territory and trekking home for a refill. Every walk is a supply run.
 
 ---
 
 ## 7. Action Recipes
 
-Actions that place pee disks on the board cost water pegs (the pee) plus modifier tokens (the intent). Water is removed from the bowl rim. The pee disk goes from the shared supply straight to the board.
-
-### 7.1 Recipe Table
-
-| Action | Pee Disk | Modifier | Result |
-|--------|----------|----------|--------|
-| **Claim** | Large (2 water) | + 1 swagger | Place on empty territory. |
-| **Challenge** | Large (2 water) | + 1 drive | Place on occupied territory. Roll to clear. |
-| **Re-claim after win** | — (challenge disk stays) | + 1 swagger OR 1 grit | Challenge disk converts to claim. Swagger = confident claim. Grit = dig in defensively. If neither available, disk returned and territory is empty. |
-| **Fortify** | Small (1 water) | + 1 grit | Add defense to your claimed territory. |
-| **Ally (initiate)** | Small (1 water) | + 1 bond | Place on dog park. Triggers home neighbourhood clearing. Sets the trap. |
-| **Ally (compulsory join)** | Small (from bank) | — (just 1 water) | Passing an active dog park. Involuntary. Also triggers home neighbourhood clearing. |
-| **Break alliance** | Small (1 water) | + 1 swagger | Destroy entire bond stack at dog park. All protections end. |
-| **Road crossing (mid-block)** | — | 1 drive | Cross the road between intersections. |
-| **Drink water** | — | 1 drive | Use a Water Source. Scrapper: free. |
-
-### 7.2 Recipe Logic
-
-- **Swagger** = confidence → claiming, re-claiming (offensive option), breaking alliances
-- **Drive** = energy/aggression → challenging, crossing roads, drinking
-- **Grit** = defensive resolve → fortifying, re-claiming (defensive option)
-- **Bond** = social → initiating alliances at dog parks
-
-### 7.3 Archetype Discounts
-
-| Archetype | Discount |
-|-----------|----------|
-| **Bruiser** | Claims cost no Swagger (large pee only). |
-| **Scrapper** | Drinking costs no Drive. |
-| **Diplomat** | Ally initiation costs no Bond (small pee only). Forced ceasefire on passing players. Challenges at −1 to attack roll. |
-| **Yapper** | Fortify costs no Grit (small pee only). Attackers gain +1 Grit when challenging Yapper claims (win or lose). |
+| Action | Water | Modifier | Pee Disk | Target |
+|--------|-------|----------|----------|--------|
+| Claim | 2 | + 1 Swagger | Large | Empty adjacent territory |
+| Challenge | 2 | + 1 Drive | Large | Occupied adjacent territory |
+| Re-claim (after win) | — | + 1 Swagger OR 1 Grit | Challenge disk stays | Same territory |
+| Fortify | 1 | + 1 Grit | Small | Your adjacent territory |
+| Ally (initiate) | 1 | + 1 Bond | Small | Adjacent dog park |
+| Ally (compulsory join) | 1 | — | Small (from bank) | Dog park being passed |
+| Break alliance | 1 | + 1 Swagger | — | Adjacent dog park |
+| Road crossing (mid-block) | — | 1 Drive | — | — |
+| Drink water | — | 1 Drive (Scrapper: free) | — | Adjacent water source |
+| Path shortcut | — | 1 Drive | — | Path entry sidewalk |
 
 ---
 
-## 8. Archetypes and Breeds
+## 8. Challenge Resolution
 
-### 8.1 The Four Archetypes
+### 8.1 Basic Roll
 
-All archetypes roll **2d6** for movement.
+Both players roll 1d6. **Attacker must roll higher than defender to win.** Ties trigger a re-roll (see Cluster Rule exception).
 
-**The Bruiser** 🐕‍🦺
-- Bowl: 6 water pegs.
-- Walk: 2d6.
-- Modifier Max: Swagger 3, Drive 2, Grit 2, Bond 1.
-- Discount: Claims cost no Swagger.
-- Identity: Dominates its block. Claims constantly and cheaply. Low Bond (1) means it fights alone — bonding is a last resort. 3 Swagger is pure surplus for re-claims and breaking alliances. Steamroller.
+### 8.2 Modifiers
 
-**The Scrapper** 🐕
-- Bowl: 3 water pegs.
-- Walk: 2d6.
-- Modifier Max: Swagger 2, Drive 3, Grit 1, Bond 2.
-- Discount: Drinking costs no Drive.
-- Identity: Crosses roads freely, hits every chance spot. Tiny bladder but free drinking keeps it going. 1 Grit means it can't stockpile fortifications — fast but fragile. Spreads wide and thin.
+**Fortify (defender).** +1 to defender's roll. Max 1 fortify token per territory.
 
-**The Diplomat** 🦮
-- Bowl: 4 water pegs.
-- Walk: 2d6.
-- Modifier Max: Swagger 2, Drive 1, Grit 2, Bond 3.
-- Discount: Ally initiation costs no Bond. Forced ceasefire. Challenges at −1.
-- Identity: Can't roam far (1 Drive). Plants bond traps at dog parks. Relies on allies for protection. Weak alone but indispensable as a partner. Needs the dog park badly.
+**Cluster Rule (defender).** If the defender holds 3 or more connected territories including this one, ties go to the defender instead of re-rolling.
 
-**The Yapper** 🐩
-- Bowl: 4 water pegs.
-- Walk: 2d6.
-- Modifier Max: Swagger 1, Drive 2, Grit 3, Bond 2.
-- Discount: Fortify costs no Grit. Attackers gain +1 Grit.
-- Identity: 1 Swagger means barely any claims from home. But can challenge (Drive) and re-claim with Grit. The turtle that bites — takes territory through fights, then digs in.
+**Alliance protection (defender).** If the territory is in the defender's home neighbourhood and the attacker is bonded with the defender, the challenge is **illegal**.
 
----
+**Home Turf (defender).** Cannot be captured. Challenges against home turfs are illegal.
 
-## 9. Challenge Resolution
+**Attacker penalties.** None.
 
-The challenge mechanic is the core conflict system. Designed to favor defense.
+### 8.3 Challenge Sequence
 
-### 9.1 Basic Roll
-
-Both players roll 1d6. **Attacker must roll higher than defender to win.** Ties trigger a re-roll (see 9.2 for exception).
-
-### 9.2 Modifiers
-
-**Fortify (defender).** Each small pee disk (fortify token) on the territory adds **+1 to the defender's roll.** Max 3 fortify = defender rolls d6+3.
-
-**Cluster Rule (defender).** If the defender holds **3 or more connected friendly territories** (including the one being challenged), **ties go to the defender** instead of re-rolling.
-
-**Home Turf (defender).** Home turfs cannot be captured. Challenges against a home turf are illegal.
-
-**Alliance protection (defender).** If the territory being challenged is in the defender's home neighbourhood AND the attacker is bonded with the defender, **the challenge is illegal.**
-
-**Grit penalty (attacker).** If holding more than **5 Grit tokens**, subtract excess from attacker's roll.
-
-**Diplomat penalty (attacker).** −1 to attack roll.
-
-**Yapper penalty (attacker).** +1 Grit token to attacker, win or lose.
-
-### 9.3 Challenge Probability Summary
-
-| Scenario | Defender Roll | Ties | Approx. Attack Success |
-|----------|-------------|------|----------------------|
-| Naked, isolated | d6 | Re-roll | ~42% |
-| Naked, cluster 3+ | d6 | To defender | ~42% |
-| 1 fortify | d6+1 | Re-roll/defender | ~28% |
-| 2 fortify | d6+2 | Re-roll/defender | ~17% |
-| 3 fortify | d6+3 | Re-roll/defender | ~9% |
-
-### 9.4 Challenge Sequence
-
-1. Attacker pays: 2 water (large pee disk placed from supply) + 1 Drive token.
-2. Both roll d6. Apply modifiers.
-3. **Attacker wins:** Defender's large pee disk and all fortify tokens returned to supply. Attacker's challenge disk stays on the territory. Attacker may **re-claim** by spending 1 swagger OR 1 grit to convert the disk into a claim. If neither is available, the disk is returned and the territory is empty.
-4. **Attacker loses:** Attacker's pee destroyed. +1 Grit to attacker.
+1. Attacker pays: 2 water + 1 Drive. Large pee disk placed from supply.
+2. Both roll 1d6. Apply modifiers.
+3. **Attacker wins:** Defender's large pee disk and fortify token returned to supply. Attacker's challenge disk stays. Attacker may re-claim by spending 1 Swagger OR 1 Grit. If neither available, disk returned and territory sits empty.
+4. **Attacker loses:** Attacker's disk returned to supply. Defender keeps everything. Attacker gains +1 Grit.
 5. **Tie (no cluster):** Re-roll.
 6. **Tie (cluster 3+):** Defender wins.
-7. **Yapper defender:** +1 Grit to attacker regardless.
 
-### 9.5 Three Outcomes
+### 8.4 Outcome Costs
 
-- **Full conquest:** Win + re-claim. Costs: 2 water + 1 drive + 1 swagger or grit.
-- **Denial:** Win, leave empty. Costs: 2 water + 1 drive.
-- **Wasted:** Lose. Costs: 2 water + 1 drive + 1 grit penalty.
-
----
-
-## 10. Actions in Detail
-
-### 10.1 Claim
-
-**Recipe:** 2 water + 1 swagger. (Bruiser: no swagger.) Large pee disk placed from supply.
-
-Place on an empty territory adjacent to your position.
-
-### 10.2 Challenge
-
-**Recipe:** 2 water + 1 drive. Large pee disk placed from supply.
-
-See Section 9 for full resolution. Cannot challenge a home turf. Cannot challenge in a bonded ally's home neighbourhood.
-
-### 10.3 Fortify
-
-**Recipe:** 1 water + 1 grit. (Yapper: no grit.) Small pee disk placed from supply.
-
-Place on your claimed territory. Max 3 per territory. Each +1 to defender's roll.
-
-### 10.4 Ally (Initiate)
-
-**Recipe:** 1 water + 1 bond. (Diplomat: no bond.) Small pee disk placed from supply onto the dog park.
-
-Sets the trap — any player who passes this dog park must join. Immediately triggers home neighbourhood clearing between the initiating player and any players who have already joined (if any).
-
-### 10.5 Ally (Compulsory Join)
-
-**Trigger:** Passing an active dog park (one with at least one bond marker).
-**Cost:** 1 water. Bank provides small pee disk in your colour from supply.
-
-Involuntary — dogs can't resist marking a spot another dog has marked. The only way to avoid is to not walk past.
-
-**On joining:** Any claims the joining player holds in any existing bonded player's home neighbourhood are immediately cleared. Any claims existing bonded players hold in the joining player's home neighbourhood are immediately cleared. Alliance protection now applies between all bonded players.
-
-Alliances can be 2, 3, or 4 players.
-
-### 10.6 Break Alliance
-
-**Recipe:** 1 water + 1 swagger. Small pee disk placed from supply.
-
-Destroy the entire bond stack at the dog park. All bond markers returned to supply. All home neighbourhood protections end immediately. Any bonded player can break it — game of chicken, who pays the swagger?
-
-### 10.7 Pass
-
-Do nothing.
+- **Full conquest** (win + re-claim): 2 water + 1 Drive + 1 Swagger or Grit.
+- **Denial** (win, leave empty): 2 water + 1 Drive.
+- **Failed challenge** (lose): 2 water + 1 Drive + 1 Grit penalty.
 
 ---
 
-## 11. Movement
+## 9. Movement
 
-### 11.1 Persistent Position
+### 9.1 Core Rules
 
-Dog figurines stay on the board between turns. Continue from where you stopped.
+- Roll 2d6. Move along sidewalk spaces only.
+- Can choose direction freely. Can backtrack. Must use full roll unless stopping at home turf or dog park (see §9.4).
+- Special spaces are never occupied — interact with them from the adjacent sidewalk.
 
-### 11.2 Direction
+### 9.2 Road Crossings
 
-Free choice each turn. Can backtrack. No fixed direction.
+- **Intersections:** Free in any direction.
+- **Mid-block:** 1 Drive token. Movement continues afterward.
 
-### 11.3 Roads and Crossings
+### 9.3 Pass-by Effects (movement continues)
 
-- **Intersections:** Free crossing in any direction.
-- **Mid-block:** 1 Drive token to cross. Can happen mid-roll.
+- **Water Source:** Optional drink — spend 1 Drive (Scrapper: free), top up water to max.
+- **Dog Park with active bond marker:** Compulsory join — spend 1 water.
+- **Dog Park without bond marker:** Receive 1 Bond token.
+- **Path entry:** Instantly move to path exit sidewalk, continue for remaining steps.
 
-### 11.4 Passing Through
+### 9.4 Stopping (forfeit remaining movement)
 
-- Water Sources: optional drink (1 Drive, Scrapper free).
-- Chance Spots: draw Chance card.
-- Dog Park: receive 1 Bond token. If active bond markers present: compulsory join.
-- Events: draw Events card.
-- Actions (Claim/Fortify/Ally): only at stopping position.
-
----
-
-## 12. Water and Bladder
-
-### 12.1 Core Rule
-
-Bladder (water pegs) does NOT auto-refill.
-
-- **Home Turf:** Refill to full. Free.
-- **Water Source:** Costs 1 Drive (Scrapper free). Draw Water Chance card.
-
-### 12.2 Water Chance Deck (24 cards)
-
-| Grade | Count | Effect |
-|-------|-------|--------|
-| 💎 Clean | ~5 | Full refill. Possible +1 Bond bonus. |
-| 👍 Decent | ~8 | Half refill (rounded up). |
-| 😬 Questionable | ~7 | Half refill + penalty (+1 Grit, or −1 Drive, or −1 Swagger). |
-| ☠️ Terrible | ~4 | No refill + penalty (+2 Grit, or lose 1 water peg this cycle, or skip next action). |
+- **Home Turf adjacent sidewalk:** Full resupply.
+- **Dog Park adjacent sidewalk:** Initiate alliance (this is your action for the turn).
 
 ---
 
-## 13. Chance Deck (24 cards)
+## 10. Alliances
 
-Drawn at Chance Spots around the board.
+### 10.1 Forming an Alliance
 
-### 13.1 Card Distribution
+1. A player initiates by spending 1 water + 1 Bond from a sidewalk adjacent to a dog park. Movement ends.
+2. Any player who passes the adjacent sidewalk of an active dog park must join. Cost: 1 water. Movement continues.
+3. Alliances can include 2, 3, or 4 players.
 
-| Category | Count | Examples |
-|----------|-------|---------|
-| 🍖 Food (Drive) | ~8 | Found a sandwich (+2 Drive). Stole a chip (+1 Drive). |
-| 💪 Confidence (Swagger) | ~4 | Scared a squirrel (+1 Swagger). Got belly rubs (+1 Swagger). |
-| 🦴 Toughening (Grit) | ~4 | Got barked at through a fence (+1 Grit). Stood ground against a cat (+1 Grit). |
-| 🤝 Social (Bond) | ~2 | Friendly sniff exchange (+1 Bond). |
-| 😬 Mixed | ~4 | Ate a rotten bone (−1 Water, +1 Grit). Chased a ball into traffic (−1 Drive, +1 Swagger). |
-| ☠️ Penalty | ~2 | Got sprayed by sprinkler (−1 Drive). Stepped in something (−1 Swagger). |
+### 10.2 What Bonding Does
 
-Drive is the most common Chance card outcome — the board's primary drive source. Bond is the rarest.
+**Immediately on joining:** Any claims either player holds in the other's home neighbourhood are cleared — returned to empty. This is mutual and immediate.
 
----
+**For the duration:** No bonded player can challenge another bonded player's claims in either player's home neighbourhood. Non-bonded players remain free to challenge those territories.
 
-## 14. Turn Structure
+### 10.3 Breaking an Alliance
 
-1. **Territory Income.** Collect swagger from territory holdings (+1 per 2–3 connected territories). Desperation bonus if applicable (+2 Grit if fewer than 3 territories).
-2. **Roll and Move.** Roll 2d6. Choose direction. Move along sidewalks. Spend Drive for road crossings. Pass through triggers: Water Sources, Chance Spots, Dog Park, Events.
-3. **Action Phase.** At stopping position: Claim, Challenge, Fortify, Ally, Break Alliance, or Pass. Spend water pegs + modifier tokens. Pee disk placed from shared supply.
-4. **Home Resupply** (if you passed or landed on Home). Refill water to full. Refill modifiers to archetype max.
-5. **Maintenance.** Housebound check.
-
-**Turn order:** Player with least territory goes first. Ties: roll off.
+Any bonded player can spend 1 water + 1 Swagger from a sidewalk adjacent to the dog park. All bond markers returned. All protections end immediately.
 
 ---
 
-## 15. Win Conditions
+## 11. Turn Structure
 
-1. Hold **10 non-home territories** at end of any turn.
+1. **Territory Income** — Collect Swagger: +1 per 3 connected territories owned.
+2. **Roll and Move** — Roll 2d6. Move along sidewalks. Trigger pass-by effects as you go. Stop early at home or dog park if desired.
+3. **Action Phase** — From stopping position, take one action targeting an adjacent space: Claim, Challenge, Fortify, Ally (initiate), or Break Alliance.
+4. **Home Resupply** — If stopped at home turf's adjacent sidewalk: refill water + modifiers to archetype max.
+
+**Turn order:** Random starting player. Fixed counterclockwise order based on home turf positions for the whole game.
+
+---
+
+## 12. Win Conditions
+
+1. Hold **15 non-home territories** at the end of any turn.
 2. **Last player** with non-home territory.
-3. After **30 turns**: most territory. Ties: most Fortify tokens, then highest Swagger.
-
-Housebound (0 non-home territories for 2 turns): walk halved, no territory bonuses.
+3. After **30 turns**: most territory wins. Ties: most Fortify tokens, then highest Swagger.
 
 ---
 
-## 16. Components List
+## 13. Components
 
-- 1 Neighbourhood game board (grid of city blocks, roads, sidewalks, territory spaces, dog parks, water sources, chance spots, events space)
-- 4 Dog breed cards (with modifier max, discount, strategy tips)
+- 1 Neighbourhood game board
+- 4 Dog breed cards
 - 4 Dog figurines (player colours)
-- 4 Dog Bowls (unique per archetype, colour-coded, water peg holes around rim, centre dish for modifier tokens)
-- Water pegs (blue) — 6 per player
+- 4 Dog Bowls (unique per archetype)
+- Water pegs (blue) — shared supply
 - Swagger tokens (bone-shaped) — shared supply
 - Drive tokens (stick-shaped) — shared supply
-- Grit tokens (TBD shape) — shared supply
+- Grit tokens — shared supply
 - Bond tokens (heart-shaped) — shared supply
-- Large pee disks (puddle-shaped) in 4 player colours — shared supply
-- Small pee disks (smaller puddle-shaped) in 4 player colours — shared supply
+- Large pee disks in 4 player colours — shared supply
+- Small pee disks in 4 player colours — shared supply
 - 1 Water Chance deck (24 cards)
 - 1 Chance deck (24 cards)
 - 1 Neighbourhood Events deck (24 cards)
@@ -502,68 +288,10 @@ Housebound (0 non-home territories for 2 turns): walk halved, no territory bonus
 
 ---
 
-## 17. Walk Tricks (Optional Module)
-
-Agree before game. Once-per-game unless noted.
-
-- **Pull the Leash** — Spend 2 Drive, +3 walk roll. Narrate what dog lunged at.
-- **Distracted Owner** — Roll doubles = +2 spaces, may reverse direction.
-- **Zoomies** (Scrapper) — Triple walk roll, no action this turn.
-- **Butt Sniff Diplomacy** (Diplomat) — Adjacent to another pawn, both reveal bowl contents. Free.
-- **Paranoid Patrol** (Yapper) — Fortify all own claims within 3 spaces (still costs per fortify).
-- **Leg Day** (Bruiser) — Claim or Challenge from 2 spaces away.
-
----
-
-## 18. Advanced Variant: Secret Water Bidding
-
-For experienced players. In challenges, both players may secretly add water pegs to their roll (+1 each). Reveal simultaneously. All bid water spent regardless of outcome.
-
-Turns challenges into poker-style bluffs. Use after learning the base game.
-
----
-
-## 19. Science References
+## 16. Science References
 
 - Quaranta, A. et al. (2025). "Decoding dog communication through the physiology and behavior of urine marking." Scientific Reports.
 - Dzieciol, M. et al. (2018). "Identification of putative volatile sex pheromones in female domestic dogs." Animal Reproduction Science.
 - McGuire, B. and Bemis, K.E. (2017). "Scent marking in shelter dogs: effects of body size." Applied Animal Behaviour Science.
 - Lisberg, A.E. and Snowdon, C.T. (2011). "Effects of sex, social status and gonadectomy on countermarking by domestic dogs." Animal Behaviour.
 - Schultz, T.H. et al. (1985). "Some volatile constituents of female dog urine." Journal of Chemical Ecology.
-
----
-
-## 20. Open Design Questions and Next Steps
-
-### Balance Tuning (needs simulator)
-- Territory swagger rate: +1 per 2 or per 3 connected territories?
-- Modifier maxes (3/2/2/1 spread): tight enough? Too tight?
-- Challenge full conquest cost (2 water + 1 drive + 1 swagger/grit): balanced?
-- Grit penalty threshold at 5: right number given max of 3 from home?
-- Chance deck distribution: enough drive to keep the game moving?
-- 30-turn game length and 10-territory win threshold: right for grid neighbourhood board?
-- How many dog parks? 1 or 2?
-- Home neighbourhood size: always exactly 2 adjacent territories, or larger?
-- What happens if a bonded player's home neighbourhood is fully claimed by third parties?
-
-### Board Design (needs prototyping)
-- Grid size: how many city blocks? 2×2? 3×3?
-- How many territories per block face?
-- Home turf placement: one per corner-adjacent block face?
-- Dog park placement: central? Between home turfs?
-- Water source and chance spot distribution.
-
-### Component Design
-- Bowl styling per archetype — art direction TBD.
-- Grit token name and shape TBD.
-- Large/small pee disk exact design.
-- Board visual design — neighbourhood aesthetic per example board.
-- Token material: wood? Plastic? Cardboard?
-
-### Simulator Requirements
-- Model grid neighbourhood with road crossing costs.
-- Model home neighbourhood bonding mechanic.
-- Model board economy: territory swagger, chance spots, dog park, water sources.
-- Model re-claim with swagger OR grit option.
-- Automated play with archetype-appropriate AI strategies.
-- Output: game length, win rates, resource utilization, crossing frequency, home visit frequency.

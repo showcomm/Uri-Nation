@@ -1616,11 +1616,14 @@ async function humanBuildPath(player, maxSteps) {
     );
     if (reachable.length === 0) break;
 
+    // Only allow ending move early at home turf or dog park
+    const allowEnd = path.length > 1 && canStopEarly(player.id, current);
+
     highlightSpaces(reachable.map(n => n.space.id));
     setControls([
       { type: 'info', text: `Steps: ${stepsLeft} | Drive: ${player.drive - accDriveCost}` },
       { type: 'spacer' },
-      { type: 'button', text: 'End Move', value: 'end', cls: 'primary' },
+      allowEnd ? { type: 'button', text: 'End Move (at home/park)', value: 'end', cls: 'primary' } : null,
       path.length > 1 ? { type: 'button', text: 'Undo', value: 'undo', cls: 'warn' } : null,
     ].filter(Boolean));
 
@@ -1997,6 +2000,21 @@ Which action best advances your position toward winning? Respond JSON only:
 // ═══════════════════════════════════════════════════════════════════════
 
 const WALKABLE = ['sidewalk', 'intersection', 'sideStreet', 'path'];
+
+// A player can only stop early (before using full roll) at spaces adjacent
+// to their own home turf or a dog park.  All other stops require full roll.
+function canStopEarly(playerId, spaceId) {
+  for (const n of board.getNeighbors(spaceId)) {
+    if (n.space.type === SPACE_TYPES.DOG_PARK) return true;
+    if (n.space.type === SPACE_TYPES.HOME) {
+      const player = game.players.find(p => p.id === playerId);
+      const homeSpace = board.getHomeSpace(playerId, game.players);
+      if (homeSpace && homeSpace.id === n.space.id) return true;
+    }
+  }
+  return false;
+}
+
 const aiStuckTurns = {};   // playerId → consecutive turns stuck with no action
 const aiLastPosition = {}; // playerId → position last turn
 
@@ -2053,11 +2071,13 @@ function getHomeSidewalks(player) {
 
 function bfsTowardTarget(player, maxSteps, targetIds) {
   const reachable = bfsReachable(player, maxSteps);
-  // Find the reachable space that is closest to any targetId
+  const valid = getValidDestinations(player.id, reachable, maxSteps);
+
+  // Find the valid destination that is closest to any targetId
   let bestDest = null;
   let bestDist = Infinity;
 
-  for (const [destId] of reachable) {
+  for (const [destId] of valid) {
     if (destId === player.position) continue;
     if (targetIds.includes(destId)) {
       // We can reach the target directly
@@ -2143,6 +2163,18 @@ function scoreWalkableDest(player, destId, steps) {
   return score;
 }
 
+// ── Valid destinations: full roll OR early stop at home/dog park ──
+
+function getValidDestinations(playerId, reachable, maxSteps) {
+  const valid = new Map();
+  for (const [destId, info] of reachable) {
+    if (info.steps === maxSteps || canStopEarly(playerId, destId)) {
+      valid.set(destId, info);
+    }
+  }
+  return valid;
+}
+
 // ── Goal-directed AI movement ──
 
 function aiComputePath(player, maxSteps) {
@@ -2156,11 +2188,12 @@ function aiComputePath(player, maxSteps) {
   }
 
   const reachable = bfsReachable(player, maxSteps);
+  const valid = getValidDestinations(player.id, reachable, maxSteps);
 
   let bestScore = -Infinity;
   let bestDest = player.position;
 
-  for (const [destId, info] of reachable) {
+  for (const [destId, info] of valid) {
     const score = scoreWalkableDest(player, destId, info.steps);
     if (score > bestScore) {
       bestScore = score;
