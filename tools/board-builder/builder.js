@@ -646,6 +646,7 @@ function exportJSON() {
   }
 
   // ── Main component export loop ──
+  // Each stamp = one game space. All cells of the stamp share the same node ID.
   for (var i = 0; i < components.length; i++) {
     var comp = components[i];
     var cells = fp(comp.type, comp.rotation);
@@ -654,81 +655,38 @@ function exportJSON() {
     if (comp.type === 'road' || comp.type === 'road3') continue;
     if (parkTypes[comp.type]) continue;
 
+    var nid = comp.id;
+
     if (comp.type === 'territory' || comp.type === 'home') {
-      // Only yard cells become space nodes
-      var yi = 0;
+      // One space per compound stamp; only yard cells go into nodeMap/positions
+      var node = {id: nid, type: comp.type === 'home' ? 'home' : 'territory'};
+      if (comp.type === 'territory') node.facing = FACING_FULL[comp.rotation % 4];
+      if (comp.type === 'home' && comp.playerColour) {
+        node.playerColour = comp.playerColour;
+        node.homeOwner = comp.playerColour;
+      }
+      spaces.push(node);
       for (var j = 0; j < cells.length; j++) {
         if (cells[j].sub !== 'yard') continue;
         var r = comp.row + cells[j].dr, c = comp.col + cells[j].dc;
-        var nid = comp.id + '_' + yi;
-        var node = {id: nid, type: comp.type === 'home' ? 'home' : 'territory'};
-        if (comp.type === 'territory') node.facing = FACING_FULL[comp.rotation % 4];
-        if (comp.type === 'home' && comp.playerColour) {
-          node.playerColour = comp.playerColour;
-          node.homeOwner = comp.playerColour;
-        }
-        spaces.push(node);
         nodeMap[r+','+c] = nid;
         positions.push({id:nid, row:r, col:c});
-        yi++;
       }
 
-    } else if (comp.type === 'pathStraight' || comp.type === 'pathStraight3') {
-      // 2-cell and 3-cell paths both produce 2 endpoint nodes with driveCost:1.
-      // For 3-cell, the middle cell maps to the entry node for adjacency.
-      var first = cells[0], last = cells[cells.length - 1];
-      var c0 = {r:comp.row+first.dr, c:comp.col+first.dc};
-      var cN = {r:comp.row+last.dr,  c:comp.col+last.dc};
-      var eid = comp.id+'_entry', xid = comp.id+'_exit';
-      spaces.push({id:eid, type:'sideStreet'});
-      spaces.push({id:xid, type:'sideStreet'});
-      nodeMap[c0.r+','+c0.c] = eid;
-      nodeMap[cN.r+','+cN.c] = xid;
-      positions.push({id:eid, row:c0.r, col:c0.c});
-      positions.push({id:xid, row:cN.r, col:cN.c});
-      // Map interior cells to entry node so adjacent things connect to the path
-      for (var j = 1; j < cells.length - 1; j++) {
-        var mr = comp.row+cells[j].dr, mc = comp.col+cells[j].dc;
-        nodeMap[mr+','+mc] = eid;
-        positions.push({id:eid, row:mr, col:mc});
-      }
-      edges.push({from:eid, to:xid, driveCost:1});
-
-    } else if (comp.type === 'pathCorner') {
-      var ep = CORNER_ENDPOINTS[comp.rotation % 4];
-      var er = comp.row+ep.entry.dr, ec = comp.col+ep.entry.dc;
-      var xr = comp.row+ep.exit.dr,  xc = comp.col+ep.exit.dc;
-      var eid = comp.id+'_entry', xid = comp.id+'_exit';
-      spaces.push({id:eid, type:'sideStreet'});
-      spaces.push({id:xid, type:'sideStreet'});
-      nodeMap[er+','+ec] = eid;
-      nodeMap[xr+','+xc] = xid;
-      positions.push({id:eid, row:er, col:ec});
-      positions.push({id:xid, row:xr, col:xc});
-      edges.push({from:eid, to:xid, driveCost:1});
-
-    } else if (comp.type === 'sidewalk3') {
-      // 3-cell sidewalk → 2 endpoint nodes (same movement cost as 2-cell).
-      // Middle cell maps to first node for adjacency.
-      var c0 = {r:comp.row+cells[0].dr, c:comp.col+cells[0].dc};
-      var cm = {r:comp.row+cells[1].dr, c:comp.col+cells[1].dc};
-      var c2 = {r:comp.row+cells[2].dr, c:comp.col+cells[2].dc};
-      var nid0 = comp.id+'_0', nid1 = comp.id+'_1';
-      spaces.push({id:nid0, type:'sidewalk'});
-      spaces.push({id:nid1, type:'sidewalk'});
-      nodeMap[c0.r+','+c0.c] = nid0;
-      nodeMap[cm.r+','+cm.c] = nid0;
-      nodeMap[c2.r+','+c2.c] = nid1;
-      positions.push({id:nid0, row:c0.r, col:c0.c});
-      positions.push({id:nid0, row:cm.r, col:cm.c});
-      positions.push({id:nid1, row:c2.r, col:c2.c});
-
-    } else {
-      // sidewalk, intersection — each cell is a node
+    } else if (comp.type === 'pathStraight' || comp.type === 'pathStraight3' || comp.type === 'pathCorner') {
+      // One space per path stamp; all cells share the node
+      spaces.push({id:nid, type:'sideStreet'});
       for (var j = 0; j < cells.length; j++) {
         var r = comp.row + cells[j].dr, c = comp.col + cells[j].dc;
-        var nid = cells.length > 1 ? comp.id + '_' + j : comp.id;
-        spaces.push({id:nid, type:comp.type});
+        nodeMap[r+','+c] = nid;
+        positions.push({id:nid, row:r, col:c});
+      }
+
+    } else {
+      // sidewalk, sidewalk3, intersection — one space per stamp
+      spaces.push({id:nid, type:comp.type === 'sidewalk3' ? 'sidewalk' : comp.type});
+      for (var j = 0; j < cells.length; j++) {
+        var r = comp.row + cells[j].dr, c = comp.col + cells[j].dc;
         nodeMap[r+','+c] = nid;
         positions.push({id:nid, row:r, col:c});
       }
@@ -747,7 +705,7 @@ function exportJSON() {
     'home':        ['sidewalk'],
     'dogPark':     ['sidewalk'],
     'waterSource': ['sidewalk'],
-    'sideStreet':  ['sidewalk']
+    'sideStreet':  ['sidewalk','sideStreet']
   };
   var edgeSeen = {};
   var DIRS = [[0,1],[0,-1],[1,0],[-1,0]];
@@ -766,7 +724,9 @@ function exportJSON() {
       var ek = [pos.id, nid].sort().join('|');
       if (edgeSeen[ek]) continue;
       edgeSeen[ek] = true;
-      edges.push({from:pos.id, to:nid, driveCost:0});
+      // Side streets cost 1 Drive per space
+      var cost = (nt === 'sideStreet' || nnt === 'sideStreet') ? 1 : 0;
+      edges.push({from:pos.id, to:nid, driveCost:cost});
     }
   }
 

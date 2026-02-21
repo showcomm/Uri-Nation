@@ -1,0 +1,3328 @@
+{
+  "spaces": [
+    {
+      "id": "dogPark_67",
+      "type": "dogPark"
+    },
+    {
+      "id": "dogPark_3164",
+      "type": "dogPark"
+    },
+    {
+      "id": "dogPark_3179",
+      "type": "dogPark"
+    },
+    {
+      "id": "waterPark_3185",
+      "type": "waterSource"
+    },
+    {
+      "id": "waterPark_3194",
+      "type": "waterSource"
+    },
+    {
+      "id": "territory_1",
+      "type": "territory",
+      "facing": "east"
+    },
+    {
+      "id": "territory_2",
+      "type": "territory",
+      "facing": "east"
+    },
+    {
+      "id": "territory_3",
+      "type": "territory",
+      "facing": "east"
+    },
+    {
+      "id": "territory_4",
+      "type": "territory",
+      "facing": "east"
+    },
+    {
+      "id": "territory_5",
+      "type": "territory",
+      "facing": "east"
+    },
+    {
+      "id": "territory_6",
+      "type": "territory",
+      "facing": "north"
+    },
+    {
+      "id": "territory_7",
+      "type": "territory",
+      "facing": "north"
+    },
+    {
+      "id": "territory_8",
+      "type": "territory",
+      "facing": "north"
+    },
+    {
+      "id": "territory_9",
+      "type": "territory",
+      "facing": "north"
+    },
+    {
+      "id": "territory_10",
+      "type": "territory",
+      "facing": "north"
+    },
+    {
+      "id": "territory_11",
+      "type": "territory",
+      "facing": "north"
+    },
+    {
+      "id": "territory_12",
+      "type": "territory",
+      "facing": "north"
+    },
+    {
+      "id": "territory_13",
+      "type": "territory",
+      "facing": "west"
+    },
+    {
+      "id": "territory_15",
+      "type": "territory",
+      "facing": "west"
+    },
+    {
+      "id": "territory_16",
+      "type": "territory",
+      "facing": "west"
+    },
+    {
+      "id": "territory_17",
+      "type": "territory",
+      "facing": "west"
+    },
+    {
+      "id": "territory_18",
+      "type": "territory",
+      "facing": "west"
+    },
+    {
+      "id": "territory_19",
+      "type": "territory",
+      "facing": "south"
+    },
+    {
+      "id": "territory_20",
+      "type": "territory",
+      "facing": "south"
+    },
+    {
+      "id": "territory_21",
+      "type": "territory",
+      "facing": "south"
+    },
+    {
+      "id": "territory_22",
+      "type": "territory",
+      "facing": "north"
+    },
+    {
+      "id": "territory_23",
+      "type": "territory",
+      "facing": "north"
+    },
+    {
+      "id": "territory_24",
+      "type": "territory",
+      "facing": "north"
+    },
+    {
+      "id": "territory_25",
+      "type": "territory",
+      "facing": "south"
+    },
+    {
+      "id": "territory_26",
+      "type": "territory",
+      "facing": "south"
+    },
+    {
+      "id": "territory_27",
+      "type": "territory",
+      "facing": "south"
+    },
+    {
+      "id": "territory_28",
+      "type": "territory",
+      "facing": "south"
+    },
+    {
+      "id": "sidewalk_29",
+      "type": "sidewalk"
+    },
+    {
+      "id": "sidewalk_30",
+      "type": "sidewalk"
+    },
+    {
+      "id": "sidewalk_31",
+      "type": "sidewalk"
+    },
+    {
+      "id": "sidewalk_32",
+      "type": "sidewalk"
+    },
+    {
+      "id": "sidewalk_33",
+      "type": "sidewalk"
+    },
+    {
+      "id": "sidewalk_34",
+      "type": "sidewalk"
+    },
+    {
+      "id": "sidewalk_35",
+      "type": "sidewalk"
+    },
+    {
+      "id": "sidewalk_36",
+      "type": "sidewalk"
+    },
+    {
+      "id": "sidewalk_37",
+      "type": "sidewalk"
+    },
+    {
+      "id": "sidewalk_38",
+      "type": "sidewalk"
+    },
+    {
+      "id": "sidewalk_39",
+      "type": "sidewalk"
+    },
+    {
+      "id": "sidewalk_40",
+      "type": "sidewalk"
+    },
+    {
+      "id": "sidewalk_41",
+      "type": "sidewalk"
+    },
+    {
+      "id": "sidewalk_42",
+      "type": "sidewalk"
+    },
+    {
+      "id": "sidewalk_43",
+      "type": "sidewalk"
+    },
+    {
+      "id": "sidewalk_44",
+      "type": "sidewalk"
+    },
+    {
+      "id": "sidewalk_45",
+      "type": "sidewalk"
+    },
+    {
+      "id": "sidewalk_46",
+      "type": "sidewalk"
+    },
+    {
+      "id": "sidewalk_47",
+      "type": "sidewalk"
+    },
+    {
+      "id": "sidewalk_48",
+      "type": "sidewalk"
+    },
+    {
+      "id": "sidewalk_49",
+      "type": "sidewalk"
+    },
+    {
+      "id": "sidewalk_50",
+      "type": "sidewalk"
+    },
+    {
+      "id": "sidewalk_51",
+      "type": "sidewalk"
+    },
+    {
+      "id": "sidewalk_52",
+      "type": "sidewalk"
+    },
+    {
+      "id": "sidewalk_53",
+      "type": "sidewalk"
+    },
+    {
+      "id": "sidewalk_54",
+      "type": "sidewalk"
+    },
+    {
+      "id": "sidewalk_55",
+      "type": "sidewalk"
+    },
+    {
+      "id": "sidewalk_56",
+      "type": "sidewalk"
+    },
+    {
+      "id": "sidewalk_57",
+      "type": "sidewalk"
+    },
+    {
+      "id": "sidewalk_58",
+      "type": "sidewalk"
+    },
+    {
+      "id": "sidewalk_59",
+      "type": "sidewalk"
+    },
+    {
+      "id": "territory_60",
+      "type": "territory",
+      "facing": "east"
+    },
+    {
+      "id": "territory_61",
+      "type": "territory",
+      "facing": "east"
+    },
+    {
+      "id": "territory_62",
+      "type": "territory",
+      "facing": "east"
+    },
+    {
+      "id": "territory_63",
+      "type": "territory",
+      "facing": "east"
+    },
+    {
+      "id": "home_64",
+      "type": "home"
+    },
+    {
+      "id": "home_65",
+      "type": "home"
+    },
+    {
+      "id": "home_66",
+      "type": "home"
+    },
+    {
+      "id": "intersection_95",
+      "type": "intersection"
+    },
+    {
+      "id": "intersection_97",
+      "type": "intersection"
+    },
+    {
+      "id": "intersection_99",
+      "type": "intersection"
+    },
+    {
+      "id": "sidewalk_129",
+      "type": "sidewalk"
+    },
+    {
+      "id": "sidewalk_130",
+      "type": "sidewalk"
+    },
+    {
+      "id": "sidewalk_131",
+      "type": "sidewalk"
+    },
+    {
+      "id": "sidewalk_132",
+      "type": "sidewalk"
+    },
+    {
+      "id": "sidewalk_133",
+      "type": "sidewalk"
+    },
+    {
+      "id": "sidewalk_134",
+      "type": "sidewalk"
+    },
+    {
+      "id": "sidewalk_135",
+      "type": "sidewalk"
+    },
+    {
+      "id": "sidewalk_136",
+      "type": "sidewalk"
+    },
+    {
+      "id": "home_141",
+      "type": "home"
+    },
+    {
+      "id": "sidewalk_144",
+      "type": "sidewalk"
+    },
+    {
+      "id": "intersection_145",
+      "type": "intersection"
+    },
+    {
+      "id": "pathStraight_146",
+      "type": "sideStreet"
+    },
+    {
+      "id": "pathStraight_147",
+      "type": "sideStreet"
+    },
+    {
+      "id": "pathStraight_148",
+      "type": "sideStreet"
+    },
+    {
+      "id": "pathStraight_149",
+      "type": "sideStreet"
+    },
+    {
+      "id": "pathStraight_150",
+      "type": "sideStreet"
+    },
+    {
+      "id": "pathStraight_151",
+      "type": "sideStreet"
+    },
+    {
+      "id": "pathStraight_152",
+      "type": "sideStreet"
+    },
+    {
+      "id": "pathStraight_153",
+      "type": "sideStreet"
+    },
+    {
+      "id": "pathStraight_154",
+      "type": "sideStreet"
+    },
+    {
+      "id": "pathStraight_155",
+      "type": "sideStreet"
+    },
+    {
+      "id": "pathStraight_158",
+      "type": "sideStreet"
+    },
+    {
+      "id": "home_160",
+      "type": "home"
+    },
+    {
+      "id": "pathStraight3_163",
+      "type": "sideStreet"
+    },
+    {
+      "id": "intersection_3197",
+      "type": "intersection"
+    },
+    {
+      "id": "intersection_3198",
+      "type": "intersection"
+    },
+    {
+      "id": "sidewalk3_33196",
+      "type": "sidewalk"
+    },
+    {
+      "id": "pathStraight_33197",
+      "type": "sideStreet"
+    }
+  ],
+  "edges": [
+    {
+      "from": "dogPark_67",
+      "to": "sidewalk_55",
+      "driveCost": 0
+    },
+    {
+      "from": "dogPark_3164",
+      "to": "sidewalk_43",
+      "driveCost": 0
+    },
+    {
+      "from": "dogPark_3179",
+      "to": "sidewalk_35",
+      "driveCost": 0
+    },
+    {
+      "from": "waterPark_3185",
+      "to": "sidewalk_47",
+      "driveCost": 0
+    },
+    {
+      "from": "waterPark_3185",
+      "to": "sidewalk_48",
+      "driveCost": 0
+    },
+    {
+      "from": "waterPark_3194",
+      "to": "sidewalk3_33196",
+      "driveCost": 0
+    },
+    {
+      "from": "territory_1",
+      "to": "sidewalk_32",
+      "driveCost": 0
+    },
+    {
+      "from": "territory_2",
+      "to": "sidewalk_31",
+      "driveCost": 0
+    },
+    {
+      "from": "territory_3",
+      "to": "sidewalk_39",
+      "driveCost": 0
+    },
+    {
+      "from": "territory_4",
+      "to": "sidewalk_41",
+      "driveCost": 0
+    },
+    {
+      "from": "territory_5",
+      "to": "sidewalk_42",
+      "driveCost": 0
+    },
+    {
+      "from": "territory_6",
+      "to": "sidewalk_51",
+      "driveCost": 0
+    },
+    {
+      "from": "territory_6",
+      "to": "sidewalk_52",
+      "driveCost": 0
+    },
+    {
+      "from": "territory_7",
+      "to": "sidewalk_50",
+      "driveCost": 0
+    },
+    {
+      "from": "territory_7",
+      "to": "sidewalk_51",
+      "driveCost": 0
+    },
+    {
+      "from": "territory_8",
+      "to": "sidewalk_49",
+      "driveCost": 0
+    },
+    {
+      "from": "territory_8",
+      "to": "sidewalk_50",
+      "driveCost": 0
+    },
+    {
+      "from": "territory_9",
+      "to": "sidewalk_48",
+      "driveCost": 0
+    },
+    {
+      "from": "territory_9",
+      "to": "sidewalk_49",
+      "driveCost": 0
+    },
+    {
+      "from": "territory_10",
+      "to": "sidewalk_46",
+      "driveCost": 0
+    },
+    {
+      "from": "territory_11",
+      "to": "sidewalk_44",
+      "driveCost": 0
+    },
+    {
+      "from": "territory_12",
+      "to": "sidewalk_43",
+      "driveCost": 0
+    },
+    {
+      "from": "territory_13",
+      "to": "sidewalk_129",
+      "driveCost": 0
+    },
+    {
+      "from": "territory_15",
+      "to": "sidewalk_131",
+      "driveCost": 0
+    },
+    {
+      "from": "territory_16",
+      "to": "sidewalk_132",
+      "driveCost": 0
+    },
+    {
+      "from": "territory_17",
+      "to": "sidewalk_144",
+      "driveCost": 0
+    },
+    {
+      "from": "territory_18",
+      "to": "sidewalk3_33196",
+      "driveCost": 0
+    },
+    {
+      "from": "territory_19",
+      "to": "sidewalk_31",
+      "driveCost": 0
+    },
+    {
+      "from": "territory_19",
+      "to": "sidewalk_29",
+      "driveCost": 0
+    },
+    {
+      "from": "territory_20",
+      "to": "sidewalk_30",
+      "driveCost": 0
+    },
+    {
+      "from": "territory_21",
+      "to": "sidewalk_37",
+      "driveCost": 0
+    },
+    {
+      "from": "territory_22",
+      "to": "sidewalk_33",
+      "driveCost": 0
+    },
+    {
+      "from": "territory_23",
+      "to": "sidewalk_34",
+      "driveCost": 0
+    },
+    {
+      "from": "territory_24",
+      "to": "sidewalk_36",
+      "driveCost": 0
+    },
+    {
+      "from": "territory_25",
+      "to": "sidewalk_133",
+      "driveCost": 0
+    },
+    {
+      "from": "territory_26",
+      "to": "sidewalk_134",
+      "driveCost": 0
+    },
+    {
+      "from": "territory_27",
+      "to": "sidewalk_135",
+      "driveCost": 0
+    },
+    {
+      "from": "territory_28",
+      "to": "sidewalk_136",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_29",
+      "to": "sidewalk_31",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_29",
+      "to": "sidewalk_30",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_30",
+      "to": "sidewalk_38",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_31",
+      "to": "sidewalk_32",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_31",
+      "to": "intersection_97",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_32",
+      "to": "pathStraight_152",
+      "driveCost": 1
+    },
+    {
+      "from": "sidewalk_33",
+      "to": "sidewalk_34",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_34",
+      "to": "sidewalk_35",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_35",
+      "to": "sidewalk_36",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_37",
+      "to": "sidewalk_38",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_38",
+      "to": "home_64",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_39",
+      "to": "pathStraight_146",
+      "driveCost": 1
+    },
+    {
+      "from": "sidewalk_39",
+      "to": "sidewalk_40",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_40",
+      "to": "home_141",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_40",
+      "to": "sidewalk_41",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_41",
+      "to": "sidewalk_42",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_43",
+      "to": "sidewalk_44",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_44",
+      "to": "sidewalk_45",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_45",
+      "to": "home_65",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_45",
+      "to": "sidewalk_46",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_46",
+      "to": "sidewalk_47",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_47",
+      "to": "sidewalk_48",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_48",
+      "to": "intersection_99",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_48",
+      "to": "sidewalk_49",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_49",
+      "to": "sidewalk_50",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_50",
+      "to": "sidewalk_51",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_51",
+      "to": "sidewalk_52",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_51",
+      "to": "intersection_145",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_52",
+      "to": "intersection_145",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_52",
+      "to": "sidewalk_53",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_53",
+      "to": "territory_63",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_53",
+      "to": "sidewalk_54",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_54",
+      "to": "home_66",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_54",
+      "to": "sidewalk_55",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_55",
+      "to": "sidewalk_56",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_56",
+      "to": "territory_62",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_56",
+      "to": "sidewalk_57",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_57",
+      "to": "territory_61",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_57",
+      "to": "sidewalk_58",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_57",
+      "to": "intersection_95",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_58",
+      "to": "pathStraight_158",
+      "driveCost": 1
+    },
+    {
+      "from": "sidewalk_58",
+      "to": "sidewalk_59",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_58",
+      "to": "territory_61",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_59",
+      "to": "territory_60",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_129",
+      "to": "sidewalk_130",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_130",
+      "to": "home_160",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_130",
+      "to": "sidewalk_131",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_131",
+      "to": "sidewalk_132",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_133",
+      "to": "sidewalk_134",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_134",
+      "to": "sidewalk_135",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_135",
+      "to": "sidewalk_136",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk_144",
+      "to": "sidewalk3_33196",
+      "driveCost": 0
+    },
+    {
+      "from": "pathStraight_146",
+      "to": "pathStraight_147",
+      "driveCost": 1
+    },
+    {
+      "from": "pathStraight_147",
+      "to": "pathStraight_148",
+      "driveCost": 1
+    },
+    {
+      "from": "pathStraight_148",
+      "to": "pathStraight_149",
+      "driveCost": 1
+    },
+    {
+      "from": "pathStraight_149",
+      "to": "pathStraight_150",
+      "driveCost": 1
+    },
+    {
+      "from": "pathStraight_150",
+      "to": "pathStraight_151",
+      "driveCost": 1
+    },
+    {
+      "from": "pathStraight_151",
+      "to": "pathStraight_152",
+      "driveCost": 1
+    },
+    {
+      "from": "pathStraight_152",
+      "to": "pathStraight_153",
+      "driveCost": 1
+    },
+    {
+      "from": "pathStraight_153",
+      "to": "pathStraight_154",
+      "driveCost": 1
+    },
+    {
+      "from": "pathStraight_154",
+      "to": "pathStraight_155",
+      "driveCost": 1
+    },
+    {
+      "from": "pathStraight_155",
+      "to": "pathStraight_33197",
+      "driveCost": 1
+    },
+    {
+      "from": "pathStraight3_163",
+      "to": "sidewalk3_33196",
+      "driveCost": 1
+    },
+    {
+      "from": "intersection_3197",
+      "to": "sidewalk3_33196",
+      "driveCost": 0
+    },
+    {
+      "from": "sidewalk3_33196",
+      "to": "pathStraight_33197",
+      "driveCost": 1
+    },
+    {
+      "from": "sidewalk_29",
+      "to": "sidewalk_33",
+      "driveCost": 1
+    },
+    {
+      "from": "sidewalk_30",
+      "to": "sidewalk_34",
+      "driveCost": 1
+    },
+    {
+      "from": "sidewalk_33",
+      "to": "sidewalk_39",
+      "driveCost": 1
+    },
+    {
+      "from": "sidewalk_35",
+      "to": "sidewalk_38",
+      "driveCost": 1
+    },
+    {
+      "from": "sidewalk_36",
+      "to": "sidewalk_37",
+      "driveCost": 1
+    },
+    {
+      "from": "sidewalk_36",
+      "to": "sidewalk_132",
+      "driveCost": 1
+    },
+    {
+      "from": "sidewalk_37",
+      "to": "sidewalk_144",
+      "driveCost": 1
+    },
+    {
+      "from": "sidewalk_42",
+      "to": "sidewalk_136",
+      "driveCost": 1
+    },
+    {
+      "from": "sidewalk_42",
+      "to": "sidewalk_43",
+      "driveCost": 1
+    },
+    {
+      "from": "sidewalk_44",
+      "to": "sidewalk_136",
+      "driveCost": 1
+    },
+    {
+      "from": "sidewalk_45",
+      "to": "sidewalk_135",
+      "driveCost": 1
+    },
+    {
+      "from": "sidewalk_46",
+      "to": "sidewalk_134",
+      "driveCost": 1
+    },
+    {
+      "from": "sidewalk_47",
+      "to": "sidewalk_133",
+      "driveCost": 1
+    },
+    {
+      "from": "sidewalk_48",
+      "to": "sidewalk_129",
+      "driveCost": 1
+    },
+    {
+      "from": "sidewalk_129",
+      "to": "sidewalk_133",
+      "driveCost": 1
+    },
+    {
+      "from": "sidewalk_132",
+      "to": "sidewalk_144",
+      "driveCost": 1
+    },
+    {
+      "from": "intersection_95",
+      "to": "intersection_3198",
+      "driveCost": 0
+    },
+    {
+      "from": "intersection_95",
+      "to": "territory_62",
+      "driveCost": 0
+    },
+    {
+      "from": "intersection_95",
+      "to": "territory_61",
+      "driveCost": 0
+    },
+    {
+      "from": "intersection_97",
+      "to": "intersection_3198",
+      "driveCost": 0
+    },
+    {
+      "from": "intersection_97",
+      "to": "pathStraight_146",
+      "driveCost": 0
+    },
+    {
+      "from": "intersection_97",
+      "to": "sidewalk_43",
+      "driveCost": 0
+    },
+    {
+      "from": "intersection_99",
+      "to": "intersection_145",
+      "driveCost": 0
+    },
+    {
+      "from": "intersection_99",
+      "to": "dogPark_3164",
+      "driveCost": 0
+    },
+    {
+      "from": "intersection_99",
+      "to": "intersection_3198",
+      "driveCost": 0
+    },
+    {
+      "from": "intersection_145",
+      "to": "territory_63",
+      "driveCost": 0
+    },
+    {
+      "from": "intersection_3197",
+      "to": "intersection_3198",
+      "driveCost": 0
+    },
+    {
+      "from": "intersection_3197",
+      "to": "waterPark_3194",
+      "driveCost": 0
+    }
+  ],
+  "_positions": [
+    {
+      "id": "dogPark_67",
+      "row": 8,
+      "col": 18
+    },
+    {
+      "id": "dogPark_67",
+      "row": 8,
+      "col": 19
+    },
+    {
+      "id": "dogPark_67",
+      "row": 8,
+      "col": 20
+    },
+    {
+      "id": "dogPark_67",
+      "row": 9,
+      "col": 20
+    },
+    {
+      "id": "dogPark_67",
+      "row": 9,
+      "col": 19
+    },
+    {
+      "id": "dogPark_67",
+      "row": 9,
+      "col": 18
+    },
+    {
+      "id": "dogPark_3164",
+      "row": 14,
+      "col": 0
+    },
+    {
+      "id": "dogPark_3164",
+      "row": 14,
+      "col": 1
+    },
+    {
+      "id": "dogPark_3164",
+      "row": 14,
+      "col": 2
+    },
+    {
+      "id": "dogPark_3164",
+      "row": 15,
+      "col": 2
+    },
+    {
+      "id": "dogPark_3164",
+      "row": 15,
+      "col": 1
+    },
+    {
+      "id": "dogPark_3164",
+      "row": 15,
+      "col": 0
+    },
+    {
+      "id": "dogPark_3164",
+      "row": 16,
+      "col": 0
+    },
+    {
+      "id": "dogPark_3164",
+      "row": 16,
+      "col": 1
+    },
+    {
+      "id": "dogPark_3164",
+      "row": 16,
+      "col": 2
+    },
+    {
+      "id": "dogPark_3164",
+      "row": 17,
+      "col": 2
+    },
+    {
+      "id": "dogPark_3164",
+      "row": 17,
+      "col": 1
+    },
+    {
+      "id": "dogPark_3164",
+      "row": 17,
+      "col": 0
+    },
+    {
+      "id": "dogPark_3164",
+      "row": 18,
+      "col": 0
+    },
+    {
+      "id": "dogPark_3164",
+      "row": 18,
+      "col": 1
+    },
+    {
+      "id": "dogPark_3164",
+      "row": 18,
+      "col": 2
+    },
+    {
+      "id": "dogPark_3179",
+      "row": 7,
+      "col": 9
+    },
+    {
+      "id": "dogPark_3179",
+      "row": 7,
+      "col": 10
+    },
+    {
+      "id": "dogPark_3179",
+      "row": 8,
+      "col": 10
+    },
+    {
+      "id": "dogPark_3179",
+      "row": 8,
+      "col": 9
+    },
+    {
+      "id": "dogPark_3179",
+      "row": 9,
+      "col": 9
+    },
+    {
+      "id": "dogPark_3179",
+      "row": 9,
+      "col": 10
+    },
+    {
+      "id": "waterPark_3185",
+      "row": 16,
+      "col": 11
+    },
+    {
+      "id": "waterPark_3185",
+      "row": 16,
+      "col": 12
+    },
+    {
+      "id": "waterPark_3185",
+      "row": 16,
+      "col": 13
+    },
+    {
+      "id": "waterPark_3185",
+      "row": 17,
+      "col": 13
+    },
+    {
+      "id": "waterPark_3185",
+      "row": 17,
+      "col": 12
+    },
+    {
+      "id": "waterPark_3185",
+      "row": 17,
+      "col": 11
+    },
+    {
+      "id": "waterPark_3185",
+      "row": 18,
+      "col": 11
+    },
+    {
+      "id": "waterPark_3185",
+      "row": 18,
+      "col": 12
+    },
+    {
+      "id": "waterPark_3185",
+      "row": 18,
+      "col": 13
+    },
+    {
+      "id": "waterPark_3194",
+      "row": 1,
+      "col": 13
+    },
+    {
+      "id": "territory_1",
+      "row": 1,
+      "col": 3
+    },
+    {
+      "id": "territory_1",
+      "row": 2,
+      "col": 3
+    },
+    {
+      "id": "territory_2",
+      "row": 3,
+      "col": 3
+    },
+    {
+      "id": "territory_2",
+      "row": 4,
+      "col": 3
+    },
+    {
+      "id": "territory_3",
+      "row": 6,
+      "col": 2
+    },
+    {
+      "id": "territory_3",
+      "row": 7,
+      "col": 2
+    },
+    {
+      "id": "territory_4",
+      "row": 10,
+      "col": 2
+    },
+    {
+      "id": "territory_4",
+      "row": 11,
+      "col": 2
+    },
+    {
+      "id": "territory_5",
+      "row": 12,
+      "col": 2
+    },
+    {
+      "id": "territory_5",
+      "row": 13,
+      "col": 2
+    },
+    {
+      "id": "territory_6",
+      "row": 16,
+      "col": 20
+    },
+    {
+      "id": "territory_6",
+      "row": 16,
+      "col": 21
+    },
+    {
+      "id": "territory_7",
+      "row": 16,
+      "col": 18
+    },
+    {
+      "id": "territory_7",
+      "row": 16,
+      "col": 19
+    },
+    {
+      "id": "territory_8",
+      "row": 16,
+      "col": 16
+    },
+    {
+      "id": "territory_8",
+      "row": 16,
+      "col": 17
+    },
+    {
+      "id": "territory_9",
+      "row": 16,
+      "col": 14
+    },
+    {
+      "id": "territory_9",
+      "row": 16,
+      "col": 15
+    },
+    {
+      "id": "territory_10",
+      "row": 16,
+      "col": 9
+    },
+    {
+      "id": "territory_10",
+      "row": 16,
+      "col": 10
+    },
+    {
+      "id": "territory_11",
+      "row": 16,
+      "col": 5
+    },
+    {
+      "id": "territory_11",
+      "row": 16,
+      "col": 6
+    },
+    {
+      "id": "territory_12",
+      "row": 16,
+      "col": 3
+    },
+    {
+      "id": "territory_12",
+      "row": 16,
+      "col": 4
+    },
+    {
+      "id": "territory_13",
+      "row": 12,
+      "col": 15
+    },
+    {
+      "id": "territory_13",
+      "row": 13,
+      "col": 15
+    },
+    {
+      "id": "territory_15",
+      "row": 8,
+      "col": 15
+    },
+    {
+      "id": "territory_15",
+      "row": 9,
+      "col": 15
+    },
+    {
+      "id": "territory_16",
+      "row": 6,
+      "col": 15
+    },
+    {
+      "id": "territory_16",
+      "row": 7,
+      "col": 15
+    },
+    {
+      "id": "territory_17",
+      "row": 3,
+      "col": 15
+    },
+    {
+      "id": "territory_17",
+      "row": 4,
+      "col": 15
+    },
+    {
+      "id": "territory_18",
+      "row": 0,
+      "col": 15
+    },
+    {
+      "id": "territory_18",
+      "row": 1,
+      "col": 15
+    },
+    {
+      "id": "territory_19",
+      "row": 3,
+      "col": 5
+    },
+    {
+      "id": "territory_19",
+      "row": 3,
+      "col": 6
+    },
+    {
+      "id": "territory_20",
+      "row": 3,
+      "col": 7
+    },
+    {
+      "id": "territory_20",
+      "row": 3,
+      "col": 8
+    },
+    {
+      "id": "territory_21",
+      "row": 3,
+      "col": 11
+    },
+    {
+      "id": "territory_21",
+      "row": 3,
+      "col": 12
+    },
+    {
+      "id": "territory_22",
+      "row": 7,
+      "col": 5
+    },
+    {
+      "id": "territory_22",
+      "row": 7,
+      "col": 6
+    },
+    {
+      "id": "territory_23",
+      "row": 7,
+      "col": 7
+    },
+    {
+      "id": "territory_23",
+      "row": 7,
+      "col": 8
+    },
+    {
+      "id": "territory_24",
+      "row": 7,
+      "col": 11
+    },
+    {
+      "id": "territory_24",
+      "row": 7,
+      "col": 12
+    },
+    {
+      "id": "territory_25",
+      "row": 12,
+      "col": 11
+    },
+    {
+      "id": "territory_25",
+      "row": 12,
+      "col": 12
+    },
+    {
+      "id": "territory_26",
+      "row": 12,
+      "col": 9
+    },
+    {
+      "id": "territory_26",
+      "row": 12,
+      "col": 10
+    },
+    {
+      "id": "territory_27",
+      "row": 12,
+      "col": 7
+    },
+    {
+      "id": "territory_27",
+      "row": 12,
+      "col": 8
+    },
+    {
+      "id": "territory_28",
+      "row": 12,
+      "col": 5
+    },
+    {
+      "id": "territory_28",
+      "row": 12,
+      "col": 6
+    },
+    {
+      "id": "sidewalk_29",
+      "row": 4,
+      "col": 5
+    },
+    {
+      "id": "sidewalk_29",
+      "row": 4,
+      "col": 6
+    },
+    {
+      "id": "sidewalk_30",
+      "row": 4,
+      "col": 7
+    },
+    {
+      "id": "sidewalk_30",
+      "row": 4,
+      "col": 8
+    },
+    {
+      "id": "sidewalk_31",
+      "row": 3,
+      "col": 4
+    },
+    {
+      "id": "sidewalk_31",
+      "row": 4,
+      "col": 4
+    },
+    {
+      "id": "sidewalk_32",
+      "row": 1,
+      "col": 4
+    },
+    {
+      "id": "sidewalk_32",
+      "row": 2,
+      "col": 4
+    },
+    {
+      "id": "sidewalk_33",
+      "row": 6,
+      "col": 5
+    },
+    {
+      "id": "sidewalk_33",
+      "row": 6,
+      "col": 6
+    },
+    {
+      "id": "sidewalk_34",
+      "row": 6,
+      "col": 7
+    },
+    {
+      "id": "sidewalk_34",
+      "row": 6,
+      "col": 8
+    },
+    {
+      "id": "sidewalk_35",
+      "row": 6,
+      "col": 9
+    },
+    {
+      "id": "sidewalk_35",
+      "row": 6,
+      "col": 10
+    },
+    {
+      "id": "sidewalk_36",
+      "row": 6,
+      "col": 11
+    },
+    {
+      "id": "sidewalk_36",
+      "row": 6,
+      "col": 12
+    },
+    {
+      "id": "sidewalk_37",
+      "row": 4,
+      "col": 11
+    },
+    {
+      "id": "sidewalk_37",
+      "row": 4,
+      "col": 12
+    },
+    {
+      "id": "sidewalk_38",
+      "row": 4,
+      "col": 9
+    },
+    {
+      "id": "sidewalk_38",
+      "row": 4,
+      "col": 10
+    },
+    {
+      "id": "sidewalk_39",
+      "row": 6,
+      "col": 3
+    },
+    {
+      "id": "sidewalk_39",
+      "row": 7,
+      "col": 3
+    },
+    {
+      "id": "sidewalk_40",
+      "row": 8,
+      "col": 3
+    },
+    {
+      "id": "sidewalk_40",
+      "row": 9,
+      "col": 3
+    },
+    {
+      "id": "sidewalk_41",
+      "row": 10,
+      "col": 3
+    },
+    {
+      "id": "sidewalk_41",
+      "row": 11,
+      "col": 3
+    },
+    {
+      "id": "sidewalk_42",
+      "row": 12,
+      "col": 3
+    },
+    {
+      "id": "sidewalk_42",
+      "row": 13,
+      "col": 3
+    },
+    {
+      "id": "sidewalk_43",
+      "row": 15,
+      "col": 3
+    },
+    {
+      "id": "sidewalk_43",
+      "row": 15,
+      "col": 4
+    },
+    {
+      "id": "sidewalk_44",
+      "row": 15,
+      "col": 5
+    },
+    {
+      "id": "sidewalk_44",
+      "row": 15,
+      "col": 6
+    },
+    {
+      "id": "sidewalk_45",
+      "row": 15,
+      "col": 7
+    },
+    {
+      "id": "sidewalk_45",
+      "row": 15,
+      "col": 8
+    },
+    {
+      "id": "sidewalk_46",
+      "row": 15,
+      "col": 9
+    },
+    {
+      "id": "sidewalk_46",
+      "row": 15,
+      "col": 10
+    },
+    {
+      "id": "sidewalk_47",
+      "row": 15,
+      "col": 11
+    },
+    {
+      "id": "sidewalk_47",
+      "row": 15,
+      "col": 12
+    },
+    {
+      "id": "sidewalk_48",
+      "row": 15,
+      "col": 13
+    },
+    {
+      "id": "sidewalk_48",
+      "row": 15,
+      "col": 14
+    },
+    {
+      "id": "sidewalk_49",
+      "row": 15,
+      "col": 15
+    },
+    {
+      "id": "sidewalk_49",
+      "row": 15,
+      "col": 16
+    },
+    {
+      "id": "sidewalk_50",
+      "row": 15,
+      "col": 17
+    },
+    {
+      "id": "sidewalk_50",
+      "row": 15,
+      "col": 18
+    },
+    {
+      "id": "sidewalk_51",
+      "row": 15,
+      "col": 19
+    },
+    {
+      "id": "sidewalk_51",
+      "row": 15,
+      "col": 20
+    },
+    {
+      "id": "sidewalk_52",
+      "row": 14,
+      "col": 21
+    },
+    {
+      "id": "sidewalk_52",
+      "row": 15,
+      "col": 21
+    },
+    {
+      "id": "sidewalk_53",
+      "row": 12,
+      "col": 21
+    },
+    {
+      "id": "sidewalk_53",
+      "row": 13,
+      "col": 21
+    },
+    {
+      "id": "sidewalk_54",
+      "row": 10,
+      "col": 21
+    },
+    {
+      "id": "sidewalk_54",
+      "row": 11,
+      "col": 21
+    },
+    {
+      "id": "sidewalk_55",
+      "row": 8,
+      "col": 21
+    },
+    {
+      "id": "sidewalk_55",
+      "row": 9,
+      "col": 21
+    },
+    {
+      "id": "sidewalk_56",
+      "row": 6,
+      "col": 21
+    },
+    {
+      "id": "sidewalk_56",
+      "row": 7,
+      "col": 21
+    },
+    {
+      "id": "sidewalk_57",
+      "row": 4,
+      "col": 21
+    },
+    {
+      "id": "sidewalk_57",
+      "row": 5,
+      "col": 21
+    },
+    {
+      "id": "sidewalk_58",
+      "row": 2,
+      "col": 21
+    },
+    {
+      "id": "sidewalk_58",
+      "row": 3,
+      "col": 21
+    },
+    {
+      "id": "sidewalk_59",
+      "row": 0,
+      "col": 21
+    },
+    {
+      "id": "sidewalk_59",
+      "row": 1,
+      "col": 21
+    },
+    {
+      "id": "territory_60",
+      "row": 0,
+      "col": 20
+    },
+    {
+      "id": "territory_60",
+      "row": 1,
+      "col": 20
+    },
+    {
+      "id": "territory_61",
+      "row": 3,
+      "col": 20
+    },
+    {
+      "id": "territory_61",
+      "row": 4,
+      "col": 20
+    },
+    {
+      "id": "territory_62",
+      "row": 6,
+      "col": 20
+    },
+    {
+      "id": "territory_62",
+      "row": 7,
+      "col": 20
+    },
+    {
+      "id": "territory_63",
+      "row": 12,
+      "col": 20
+    },
+    {
+      "id": "territory_63",
+      "row": 13,
+      "col": 20
+    },
+    {
+      "id": "home_64",
+      "row": 3,
+      "col": 9
+    },
+    {
+      "id": "home_64",
+      "row": 3,
+      "col": 10
+    },
+    {
+      "id": "home_65",
+      "row": 16,
+      "col": 7
+    },
+    {
+      "id": "home_65",
+      "row": 16,
+      "col": 8
+    },
+    {
+      "id": "home_66",
+      "row": 10,
+      "col": 20
+    },
+    {
+      "id": "home_66",
+      "row": 11,
+      "col": 20
+    },
+    {
+      "id": "intersection_95",
+      "row": 5,
+      "col": 20
+    },
+    {
+      "id": "intersection_97",
+      "row": 5,
+      "col": 4
+    },
+    {
+      "id": "intersection_99",
+      "row": 14,
+      "col": 13
+    },
+    {
+      "id": "sidewalk_129",
+      "row": 12,
+      "col": 14
+    },
+    {
+      "id": "sidewalk_129",
+      "row": 13,
+      "col": 14
+    },
+    {
+      "id": "sidewalk_130",
+      "row": 10,
+      "col": 14
+    },
+    {
+      "id": "sidewalk_130",
+      "row": 11,
+      "col": 14
+    },
+    {
+      "id": "sidewalk_131",
+      "row": 8,
+      "col": 14
+    },
+    {
+      "id": "sidewalk_131",
+      "row": 9,
+      "col": 14
+    },
+    {
+      "id": "sidewalk_132",
+      "row": 6,
+      "col": 14
+    },
+    {
+      "id": "sidewalk_132",
+      "row": 7,
+      "col": 14
+    },
+    {
+      "id": "sidewalk_133",
+      "row": 13,
+      "col": 11
+    },
+    {
+      "id": "sidewalk_133",
+      "row": 13,
+      "col": 12
+    },
+    {
+      "id": "sidewalk_134",
+      "row": 13,
+      "col": 9
+    },
+    {
+      "id": "sidewalk_134",
+      "row": 13,
+      "col": 10
+    },
+    {
+      "id": "sidewalk_135",
+      "row": 13,
+      "col": 7
+    },
+    {
+      "id": "sidewalk_135",
+      "row": 13,
+      "col": 8
+    },
+    {
+      "id": "sidewalk_136",
+      "row": 13,
+      "col": 5
+    },
+    {
+      "id": "sidewalk_136",
+      "row": 13,
+      "col": 6
+    },
+    {
+      "id": "home_141",
+      "row": 8,
+      "col": 2
+    },
+    {
+      "id": "home_141",
+      "row": 9,
+      "col": 2
+    },
+    {
+      "id": "sidewalk_144",
+      "row": 3,
+      "col": 14
+    },
+    {
+      "id": "sidewalk_144",
+      "row": 4,
+      "col": 14
+    },
+    {
+      "id": "intersection_145",
+      "row": 14,
+      "col": 20
+    },
+    {
+      "id": "pathStraight_146",
+      "row": 5,
+      "col": 2
+    },
+    {
+      "id": "pathStraight_146",
+      "row": 5,
+      "col": 3
+    },
+    {
+      "id": "pathStraight_147",
+      "row": 5,
+      "col": 0
+    },
+    {
+      "id": "pathStraight_147",
+      "row": 5,
+      "col": 1
+    },
+    {
+      "id": "pathStraight_148",
+      "row": 3,
+      "col": 0
+    },
+    {
+      "id": "pathStraight_148",
+      "row": 4,
+      "col": 0
+    },
+    {
+      "id": "pathStraight_149",
+      "row": 1,
+      "col": 0
+    },
+    {
+      "id": "pathStraight_149",
+      "row": 2,
+      "col": 0
+    },
+    {
+      "id": "pathStraight_150",
+      "row": 0,
+      "col": 0
+    },
+    {
+      "id": "pathStraight_150",
+      "row": 0,
+      "col": 1
+    },
+    {
+      "id": "pathStraight_151",
+      "row": 0,
+      "col": 2
+    },
+    {
+      "id": "pathStraight_151",
+      "row": 0,
+      "col": 3
+    },
+    {
+      "id": "pathStraight_152",
+      "row": 0,
+      "col": 4
+    },
+    {
+      "id": "pathStraight_152",
+      "row": 0,
+      "col": 5
+    },
+    {
+      "id": "pathStraight_153",
+      "row": 0,
+      "col": 6
+    },
+    {
+      "id": "pathStraight_153",
+      "row": 0,
+      "col": 7
+    },
+    {
+      "id": "pathStraight_154",
+      "row": 0,
+      "col": 8
+    },
+    {
+      "id": "pathStraight_154",
+      "row": 0,
+      "col": 9
+    },
+    {
+      "id": "pathStraight_155",
+      "row": 0,
+      "col": 10
+    },
+    {
+      "id": "pathStraight_155",
+      "row": 0,
+      "col": 11
+    },
+    {
+      "id": "pathStraight_158",
+      "row": 2,
+      "col": 19
+    },
+    {
+      "id": "pathStraight_158",
+      "row": 2,
+      "col": 20
+    },
+    {
+      "id": "home_160",
+      "row": 10,
+      "col": 15
+    },
+    {
+      "id": "home_160",
+      "row": 11,
+      "col": 15
+    },
+    {
+      "id": "pathStraight3_163",
+      "row": 2,
+      "col": 15
+    },
+    {
+      "id": "pathStraight3_163",
+      "row": 2,
+      "col": 16
+    },
+    {
+      "id": "pathStraight3_163",
+      "row": 2,
+      "col": 17
+    },
+    {
+      "id": "intersection_3197",
+      "row": 2,
+      "col": 13
+    },
+    {
+      "id": "intersection_3198",
+      "row": 5,
+      "col": 13
+    },
+    {
+      "id": "sidewalk3_33196",
+      "row": 0,
+      "col": 14
+    },
+    {
+      "id": "sidewalk3_33196",
+      "row": 1,
+      "col": 14
+    },
+    {
+      "id": "sidewalk3_33196",
+      "row": 2,
+      "col": 14
+    },
+    {
+      "id": "pathStraight_33197",
+      "row": 0,
+      "col": 12
+    },
+    {
+      "id": "pathStraight_33197",
+      "row": 0,
+      "col": 13
+    }
+  ],
+  "_grid": {
+    "cols": 22,
+    "rows": 19,
+    "components": [
+      {
+        "id": "territory_1",
+        "type": "territory",
+        "row": 1,
+        "col": 1,
+        "rotation": 1
+      },
+      {
+        "id": "territory_2",
+        "type": "territory",
+        "row": 3,
+        "col": 1,
+        "rotation": 1
+      },
+      {
+        "id": "territory_3",
+        "type": "territory",
+        "row": 6,
+        "col": 0,
+        "rotation": 1
+      },
+      {
+        "id": "territory_4",
+        "type": "territory",
+        "row": 10,
+        "col": 0,
+        "rotation": 1
+      },
+      {
+        "id": "territory_5",
+        "type": "territory",
+        "row": 12,
+        "col": 0,
+        "rotation": 1
+      },
+      {
+        "id": "territory_6",
+        "type": "territory",
+        "row": 16,
+        "col": 20,
+        "rotation": 0
+      },
+      {
+        "id": "territory_7",
+        "type": "territory",
+        "row": 16,
+        "col": 18,
+        "rotation": 0
+      },
+      {
+        "id": "territory_8",
+        "type": "territory",
+        "row": 16,
+        "col": 16,
+        "rotation": 0
+      },
+      {
+        "id": "territory_9",
+        "type": "territory",
+        "row": 16,
+        "col": 14,
+        "rotation": 0
+      },
+      {
+        "id": "territory_10",
+        "type": "territory",
+        "row": 16,
+        "col": 9,
+        "rotation": 0
+      },
+      {
+        "id": "territory_11",
+        "type": "territory",
+        "row": 16,
+        "col": 5,
+        "rotation": 0
+      },
+      {
+        "id": "territory_12",
+        "type": "territory",
+        "row": 16,
+        "col": 3,
+        "rotation": 0
+      },
+      {
+        "id": "territory_13",
+        "type": "territory",
+        "row": 12,
+        "col": 15,
+        "rotation": 3
+      },
+      {
+        "id": "territory_15",
+        "type": "territory",
+        "row": 8,
+        "col": 15,
+        "rotation": 3
+      },
+      {
+        "id": "territory_16",
+        "type": "territory",
+        "row": 6,
+        "col": 15,
+        "rotation": 3
+      },
+      {
+        "id": "territory_17",
+        "type": "territory",
+        "row": 3,
+        "col": 15,
+        "rotation": 3
+      },
+      {
+        "id": "territory_18",
+        "type": "territory",
+        "row": 0,
+        "col": 15,
+        "rotation": 3
+      },
+      {
+        "id": "territory_19",
+        "type": "territory",
+        "row": 1,
+        "col": 5,
+        "rotation": 2
+      },
+      {
+        "id": "territory_20",
+        "type": "territory",
+        "row": 1,
+        "col": 7,
+        "rotation": 2
+      },
+      {
+        "id": "territory_21",
+        "type": "territory",
+        "row": 1,
+        "col": 11,
+        "rotation": 2
+      },
+      {
+        "id": "territory_22",
+        "type": "territory",
+        "row": 7,
+        "col": 5,
+        "rotation": 0
+      },
+      {
+        "id": "territory_23",
+        "type": "territory",
+        "row": 7,
+        "col": 7,
+        "rotation": 0
+      },
+      {
+        "id": "territory_24",
+        "type": "territory",
+        "row": 7,
+        "col": 11,
+        "rotation": 0
+      },
+      {
+        "id": "territory_25",
+        "type": "territory",
+        "row": 10,
+        "col": 11,
+        "rotation": 2
+      },
+      {
+        "id": "territory_26",
+        "type": "territory",
+        "row": 10,
+        "col": 9,
+        "rotation": 2
+      },
+      {
+        "id": "territory_27",
+        "type": "territory",
+        "row": 10,
+        "col": 7,
+        "rotation": 2
+      },
+      {
+        "id": "territory_28",
+        "type": "territory",
+        "row": 10,
+        "col": 5,
+        "rotation": 2
+      },
+      {
+        "id": "sidewalk_29",
+        "type": "sidewalk",
+        "row": 4,
+        "col": 5,
+        "rotation": 0
+      },
+      {
+        "id": "sidewalk_30",
+        "type": "sidewalk",
+        "row": 4,
+        "col": 7,
+        "rotation": 0
+      },
+      {
+        "id": "sidewalk_31",
+        "type": "sidewalk",
+        "row": 3,
+        "col": 4,
+        "rotation": 1
+      },
+      {
+        "id": "sidewalk_32",
+        "type": "sidewalk",
+        "row": 1,
+        "col": 4,
+        "rotation": 1
+      },
+      {
+        "id": "sidewalk_33",
+        "type": "sidewalk",
+        "row": 6,
+        "col": 5,
+        "rotation": 0
+      },
+      {
+        "id": "sidewalk_34",
+        "type": "sidewalk",
+        "row": 6,
+        "col": 7,
+        "rotation": 0
+      },
+      {
+        "id": "sidewalk_35",
+        "type": "sidewalk",
+        "row": 6,
+        "col": 9,
+        "rotation": 0
+      },
+      {
+        "id": "sidewalk_36",
+        "type": "sidewalk",
+        "row": 6,
+        "col": 11,
+        "rotation": 0
+      },
+      {
+        "id": "sidewalk_37",
+        "type": "sidewalk",
+        "row": 4,
+        "col": 11,
+        "rotation": 0
+      },
+      {
+        "id": "sidewalk_38",
+        "type": "sidewalk",
+        "row": 4,
+        "col": 9,
+        "rotation": 0
+      },
+      {
+        "id": "sidewalk_39",
+        "type": "sidewalk",
+        "row": 6,
+        "col": 3,
+        "rotation": 1
+      },
+      {
+        "id": "sidewalk_40",
+        "type": "sidewalk",
+        "row": 8,
+        "col": 3,
+        "rotation": 1
+      },
+      {
+        "id": "sidewalk_41",
+        "type": "sidewalk",
+        "row": 10,
+        "col": 3,
+        "rotation": 1
+      },
+      {
+        "id": "sidewalk_42",
+        "type": "sidewalk",
+        "row": 12,
+        "col": 3,
+        "rotation": 1
+      },
+      {
+        "id": "sidewalk_43",
+        "type": "sidewalk",
+        "row": 15,
+        "col": 3,
+        "rotation": 0
+      },
+      {
+        "id": "sidewalk_44",
+        "type": "sidewalk",
+        "row": 15,
+        "col": 5,
+        "rotation": 0
+      },
+      {
+        "id": "sidewalk_45",
+        "type": "sidewalk",
+        "row": 15,
+        "col": 7,
+        "rotation": 0
+      },
+      {
+        "id": "sidewalk_46",
+        "type": "sidewalk",
+        "row": 15,
+        "col": 9,
+        "rotation": 0
+      },
+      {
+        "id": "sidewalk_47",
+        "type": "sidewalk",
+        "row": 15,
+        "col": 11,
+        "rotation": 0
+      },
+      {
+        "id": "sidewalk_48",
+        "type": "sidewalk",
+        "row": 15,
+        "col": 13,
+        "rotation": 0
+      },
+      {
+        "id": "sidewalk_49",
+        "type": "sidewalk",
+        "row": 15,
+        "col": 15,
+        "rotation": 0
+      },
+      {
+        "id": "sidewalk_50",
+        "type": "sidewalk",
+        "row": 15,
+        "col": 17,
+        "rotation": 0
+      },
+      {
+        "id": "sidewalk_51",
+        "type": "sidewalk",
+        "row": 15,
+        "col": 19,
+        "rotation": 0
+      },
+      {
+        "id": "sidewalk_52",
+        "type": "sidewalk",
+        "row": 14,
+        "col": 21,
+        "rotation": 1
+      },
+      {
+        "id": "sidewalk_53",
+        "type": "sidewalk",
+        "row": 12,
+        "col": 21,
+        "rotation": 1
+      },
+      {
+        "id": "sidewalk_54",
+        "type": "sidewalk",
+        "row": 10,
+        "col": 21,
+        "rotation": 1
+      },
+      {
+        "id": "sidewalk_55",
+        "type": "sidewalk",
+        "row": 8,
+        "col": 21,
+        "rotation": 1
+      },
+      {
+        "id": "sidewalk_56",
+        "type": "sidewalk",
+        "row": 6,
+        "col": 21,
+        "rotation": 1
+      },
+      {
+        "id": "sidewalk_57",
+        "type": "sidewalk",
+        "row": 4,
+        "col": 21,
+        "rotation": 1
+      },
+      {
+        "id": "sidewalk_58",
+        "type": "sidewalk",
+        "row": 2,
+        "col": 21,
+        "rotation": 1
+      },
+      {
+        "id": "sidewalk_59",
+        "type": "sidewalk",
+        "row": 0,
+        "col": 21,
+        "rotation": 1
+      },
+      {
+        "id": "territory_60",
+        "type": "territory",
+        "row": 0,
+        "col": 18,
+        "rotation": 1
+      },
+      {
+        "id": "territory_61",
+        "type": "territory",
+        "row": 3,
+        "col": 18,
+        "rotation": 1
+      },
+      {
+        "id": "territory_62",
+        "type": "territory",
+        "row": 6,
+        "col": 18,
+        "rotation": 1
+      },
+      {
+        "id": "territory_63",
+        "type": "territory",
+        "row": 12,
+        "col": 18,
+        "rotation": 1
+      },
+      {
+        "id": "home_64",
+        "type": "home",
+        "row": 1,
+        "col": 9,
+        "rotation": 2
+      },
+      {
+        "id": "home_65",
+        "type": "home",
+        "row": 16,
+        "col": 7,
+        "rotation": 0
+      },
+      {
+        "id": "home_66",
+        "type": "home",
+        "row": 10,
+        "col": 18,
+        "rotation": 1
+      },
+      {
+        "id": "dogPark_67",
+        "type": "dogPark",
+        "row": 8,
+        "col": 18,
+        "rotation": 0
+      },
+      {
+        "id": "dogPark_68",
+        "type": "dogPark",
+        "row": 8,
+        "col": 19,
+        "rotation": 0
+      },
+      {
+        "id": "dogPark_69",
+        "type": "dogPark",
+        "row": 8,
+        "col": 20,
+        "rotation": 0
+      },
+      {
+        "id": "dogPark_70",
+        "type": "dogPark",
+        "row": 9,
+        "col": 20,
+        "rotation": 0
+      },
+      {
+        "id": "dogPark_71",
+        "type": "dogPark",
+        "row": 9,
+        "col": 19,
+        "rotation": 0
+      },
+      {
+        "id": "dogPark_72",
+        "type": "dogPark",
+        "row": 9,
+        "col": 18,
+        "rotation": 0
+      },
+      {
+        "id": "road_88",
+        "type": "road",
+        "row": 5,
+        "col": 5,
+        "rotation": 1
+      },
+      {
+        "id": "road_89",
+        "type": "road",
+        "row": 5,
+        "col": 7,
+        "rotation": 1
+      },
+      {
+        "id": "road_90",
+        "type": "road",
+        "row": 5,
+        "col": 9,
+        "rotation": 1
+      },
+      {
+        "id": "road_91",
+        "type": "road",
+        "row": 5,
+        "col": 11,
+        "rotation": 1
+      },
+      {
+        "id": "road_92",
+        "type": "road",
+        "row": 5,
+        "col": 14,
+        "rotation": 1
+      },
+      {
+        "id": "road_93",
+        "type": "road",
+        "row": 5,
+        "col": 16,
+        "rotation": 1
+      },
+      {
+        "id": "road_94",
+        "type": "road",
+        "row": 5,
+        "col": 18,
+        "rotation": 1
+      },
+      {
+        "id": "intersection_95",
+        "type": "intersection",
+        "row": 5,
+        "col": 20,
+        "rotation": 0
+      },
+      {
+        "id": "intersection_97",
+        "type": "intersection",
+        "row": 5,
+        "col": 4,
+        "rotation": 0
+      },
+      {
+        "id": "intersection_99",
+        "type": "intersection",
+        "row": 14,
+        "col": 13,
+        "rotation": 0
+      },
+      {
+        "id": "road_100",
+        "type": "road",
+        "row": 14,
+        "col": 5,
+        "rotation": 1
+      },
+      {
+        "id": "road_101",
+        "type": "road",
+        "row": 14,
+        "col": 7,
+        "rotation": 1
+      },
+      {
+        "id": "road_102",
+        "type": "road",
+        "row": 14,
+        "col": 9,
+        "rotation": 1
+      },
+      {
+        "id": "road_103",
+        "type": "road",
+        "row": 14,
+        "col": 11,
+        "rotation": 1
+      },
+      {
+        "id": "road_104",
+        "type": "road",
+        "row": 14,
+        "col": 14,
+        "rotation": 1
+      },
+      {
+        "id": "road_105",
+        "type": "road",
+        "row": 14,
+        "col": 16,
+        "rotation": 1
+      },
+      {
+        "id": "road_106",
+        "type": "road",
+        "row": 14,
+        "col": 18,
+        "rotation": 1
+      },
+      {
+        "id": "road_107",
+        "type": "road",
+        "row": 14,
+        "col": 3,
+        "rotation": 1
+      },
+      {
+        "id": "road_123",
+        "type": "road",
+        "row": 3,
+        "col": 13,
+        "rotation": 0
+      },
+      {
+        "id": "road_125",
+        "type": "road",
+        "row": 6,
+        "col": 13,
+        "rotation": 0
+      },
+      {
+        "id": "road_126",
+        "type": "road",
+        "row": 8,
+        "col": 13,
+        "rotation": 0
+      },
+      {
+        "id": "road_127",
+        "type": "road",
+        "row": 10,
+        "col": 13,
+        "rotation": 0
+      },
+      {
+        "id": "road_128",
+        "type": "road",
+        "row": 12,
+        "col": 13,
+        "rotation": 0
+      },
+      {
+        "id": "sidewalk_129",
+        "type": "sidewalk",
+        "row": 12,
+        "col": 14,
+        "rotation": 1
+      },
+      {
+        "id": "sidewalk_130",
+        "type": "sidewalk",
+        "row": 10,
+        "col": 14,
+        "rotation": 1
+      },
+      {
+        "id": "sidewalk_131",
+        "type": "sidewalk",
+        "row": 8,
+        "col": 14,
+        "rotation": 1
+      },
+      {
+        "id": "sidewalk_132",
+        "type": "sidewalk",
+        "row": 6,
+        "col": 14,
+        "rotation": 1
+      },
+      {
+        "id": "sidewalk_133",
+        "type": "sidewalk",
+        "row": 13,
+        "col": 11,
+        "rotation": 0
+      },
+      {
+        "id": "sidewalk_134",
+        "type": "sidewalk",
+        "row": 13,
+        "col": 9,
+        "rotation": 0
+      },
+      {
+        "id": "sidewalk_135",
+        "type": "sidewalk",
+        "row": 13,
+        "col": 7,
+        "rotation": 0
+      },
+      {
+        "id": "sidewalk_136",
+        "type": "sidewalk",
+        "row": 13,
+        "col": 5,
+        "rotation": 0
+      },
+      {
+        "id": "road_137",
+        "type": "road",
+        "row": 6,
+        "col": 4,
+        "rotation": 0
+      },
+      {
+        "id": "road_138",
+        "type": "road",
+        "row": 8,
+        "col": 4,
+        "rotation": 0
+      },
+      {
+        "id": "road_139",
+        "type": "road",
+        "row": 12,
+        "col": 4,
+        "rotation": 0
+      },
+      {
+        "id": "road_140",
+        "type": "road",
+        "row": 10,
+        "col": 4,
+        "rotation": 0
+      },
+      {
+        "id": "home_141",
+        "type": "home",
+        "row": 8,
+        "col": 0,
+        "rotation": 1
+      },
+      {
+        "id": "sidewalk_144",
+        "type": "sidewalk",
+        "row": 3,
+        "col": 14,
+        "rotation": 1
+      },
+      {
+        "id": "intersection_145",
+        "type": "intersection",
+        "row": 14,
+        "col": 20,
+        "rotation": 0
+      },
+      {
+        "id": "pathStraight_146",
+        "type": "pathStraight",
+        "row": 5,
+        "col": 2,
+        "rotation": 0
+      },
+      {
+        "id": "pathStraight_147",
+        "type": "pathStraight",
+        "row": 5,
+        "col": 0,
+        "rotation": 0
+      },
+      {
+        "id": "pathStraight_148",
+        "type": "pathStraight",
+        "row": 3,
+        "col": 0,
+        "rotation": 1
+      },
+      {
+        "id": "pathStraight_149",
+        "type": "pathStraight",
+        "row": 1,
+        "col": 0,
+        "rotation": 1
+      },
+      {
+        "id": "pathStraight_150",
+        "type": "pathStraight",
+        "row": 0,
+        "col": 0,
+        "rotation": 0
+      },
+      {
+        "id": "pathStraight_151",
+        "type": "pathStraight",
+        "row": 0,
+        "col": 2,
+        "rotation": 0
+      },
+      {
+        "id": "pathStraight_152",
+        "type": "pathStraight",
+        "row": 0,
+        "col": 4,
+        "rotation": 0
+      },
+      {
+        "id": "pathStraight_153",
+        "type": "pathStraight",
+        "row": 0,
+        "col": 6,
+        "rotation": 0
+      },
+      {
+        "id": "pathStraight_154",
+        "type": "pathStraight",
+        "row": 0,
+        "col": 8,
+        "rotation": 0
+      },
+      {
+        "id": "pathStraight_155",
+        "type": "pathStraight",
+        "row": 0,
+        "col": 10,
+        "rotation": 0
+      },
+      {
+        "id": "pathStraight_158",
+        "type": "pathStraight",
+        "row": 2,
+        "col": 19,
+        "rotation": 0
+      },
+      {
+        "id": "home_160",
+        "type": "home",
+        "row": 10,
+        "col": 15,
+        "rotation": 3
+      },
+      {
+        "id": "pathStraight3_163",
+        "type": "pathStraight3",
+        "row": 2,
+        "col": 15,
+        "rotation": 0
+      },
+      {
+        "id": "dogPark_3164",
+        "type": "dogPark",
+        "row": 14,
+        "col": 0,
+        "rotation": 0
+      },
+      {
+        "id": "dogPark_3165",
+        "type": "dogPark",
+        "row": 14,
+        "col": 1,
+        "rotation": 0
+      },
+      {
+        "id": "dogPark_3166",
+        "type": "dogPark",
+        "row": 14,
+        "col": 2,
+        "rotation": 0
+      },
+      {
+        "id": "dogPark_3167",
+        "type": "dogPark",
+        "row": 15,
+        "col": 2,
+        "rotation": 0
+      },
+      {
+        "id": "dogPark_3168",
+        "type": "dogPark",
+        "row": 16,
+        "col": 2,
+        "rotation": 0
+      },
+      {
+        "id": "dogPark_3169",
+        "type": "dogPark",
+        "row": 17,
+        "col": 2,
+        "rotation": 0
+      },
+      {
+        "id": "dogPark_3170",
+        "type": "dogPark",
+        "row": 18,
+        "col": 2,
+        "rotation": 0
+      },
+      {
+        "id": "dogPark_3171",
+        "type": "dogPark",
+        "row": 18,
+        "col": 1,
+        "rotation": 0
+      },
+      {
+        "id": "dogPark_3172",
+        "type": "dogPark",
+        "row": 18,
+        "col": 0,
+        "rotation": 0
+      },
+      {
+        "id": "dogPark_3173",
+        "type": "dogPark",
+        "row": 17,
+        "col": 0,
+        "rotation": 0
+      },
+      {
+        "id": "dogPark_3174",
+        "type": "dogPark",
+        "row": 17,
+        "col": 1,
+        "rotation": 0
+      },
+      {
+        "id": "dogPark_3175",
+        "type": "dogPark",
+        "row": 16,
+        "col": 1,
+        "rotation": 0
+      },
+      {
+        "id": "dogPark_3176",
+        "type": "dogPark",
+        "row": 16,
+        "col": 0,
+        "rotation": 0
+      },
+      {
+        "id": "dogPark_3177",
+        "type": "dogPark",
+        "row": 15,
+        "col": 0,
+        "rotation": 0
+      },
+      {
+        "id": "dogPark_3178",
+        "type": "dogPark",
+        "row": 15,
+        "col": 1,
+        "rotation": 0
+      },
+      {
+        "id": "dogPark_3179",
+        "type": "dogPark",
+        "row": 7,
+        "col": 9,
+        "rotation": 0
+      },
+      {
+        "id": "dogPark_3180",
+        "type": "dogPark",
+        "row": 7,
+        "col": 10,
+        "rotation": 0
+      },
+      {
+        "id": "dogPark_3181",
+        "type": "dogPark",
+        "row": 8,
+        "col": 10,
+        "rotation": 0
+      },
+      {
+        "id": "dogPark_3182",
+        "type": "dogPark",
+        "row": 8,
+        "col": 9,
+        "rotation": 0
+      },
+      {
+        "id": "dogPark_3183",
+        "type": "dogPark",
+        "row": 9,
+        "col": 9,
+        "rotation": 0
+      },
+      {
+        "id": "dogPark_3184",
+        "type": "dogPark",
+        "row": 9,
+        "col": 10,
+        "rotation": 0
+      },
+      {
+        "id": "waterPark_3185",
+        "type": "waterPark",
+        "row": 16,
+        "col": 11,
+        "rotation": 0
+      },
+      {
+        "id": "waterPark_3186",
+        "type": "waterPark",
+        "row": 16,
+        "col": 12,
+        "rotation": 0
+      },
+      {
+        "id": "waterPark_3187",
+        "type": "waterPark",
+        "row": 16,
+        "col": 13,
+        "rotation": 0
+      },
+      {
+        "id": "waterPark_3188",
+        "type": "waterPark",
+        "row": 17,
+        "col": 13,
+        "rotation": 0
+      },
+      {
+        "id": "waterPark_3189",
+        "type": "waterPark",
+        "row": 17,
+        "col": 12,
+        "rotation": 0
+      },
+      {
+        "id": "waterPark_3190",
+        "type": "waterPark",
+        "row": 17,
+        "col": 11,
+        "rotation": 0
+      },
+      {
+        "id": "waterPark_3191",
+        "type": "waterPark",
+        "row": 18,
+        "col": 11,
+        "rotation": 0
+      },
+      {
+        "id": "waterPark_3192",
+        "type": "waterPark",
+        "row": 18,
+        "col": 12,
+        "rotation": 0
+      },
+      {
+        "id": "waterPark_3193",
+        "type": "waterPark",
+        "row": 18,
+        "col": 13,
+        "rotation": 0
+      },
+      {
+        "id": "waterPark_3194",
+        "type": "waterPark",
+        "row": 1,
+        "col": 13,
+        "rotation": 0
+      },
+      {
+        "id": "intersection_3197",
+        "type": "intersection",
+        "row": 2,
+        "col": 13,
+        "rotation": 0
+      },
+      {
+        "id": "intersection_3198",
+        "type": "intersection",
+        "row": 5,
+        "col": 13,
+        "rotation": 0
+      },
+      {
+        "id": "sidewalk3_33196",
+        "type": "sidewalk3",
+        "row": 0,
+        "col": 14,
+        "rotation": 1
+      },
+      {
+        "id": "pathStraight_33197",
+        "type": "pathStraight",
+        "row": 0,
+        "col": 12,
+        "rotation": 0
+      }
+    ]
+  }
+}

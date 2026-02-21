@@ -80,6 +80,7 @@ body {
   border-right: 1px solid #333;
   padding: 12px;
   overflow-y: auto;
+  min-height: 0;
 }
 #sidebar h3 {
   font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
@@ -125,18 +126,14 @@ body {
   position: relative;
 }
 #board-svg { cursor: default; }
-#board-svg .space-rect { cursor: pointer; stroke: rgba(255,255,255,0.15); stroke-width: 1; }
-#board-svg .space-rect:hover { stroke: rgba(255,255,255,0.5); stroke-width: 2; }
-#board-svg .space-label { pointer-events: none; font-family: monospace; font-size: 9px; fill: rgba(255,255,255,0.7); }
-#board-svg .space-type-label { pointer-events: none; font-family: monospace; font-weight: bold; font-size: 11px; fill: #fff; }
-#board-svg .edge-line { stroke: #555; stroke-width: 1.5; stroke-dasharray: 4,3; }
-#board-svg .edge-line.costly { stroke: #e04040; stroke-dasharray: none; stroke-width: 2; }
-#board-svg .edge-cost-label { font-family: monospace; font-size: 9px; fill: #e04040; font-weight: bold; }
-#board-svg .highlight { fill: rgba(0,128,255,0.25); stroke: #0080ff; stroke-width: 2.5; rx: 4; pointer-events: none; }
-#board-svg .highlight-action { fill: rgba(255,200,0,0.2); stroke: #ffc800; stroke-width: 2.5; rx: 4; pointer-events: none; }
+#board-svg .cell-rect { stroke: rgba(0,0,0,0.15); stroke-width: 0.5; }
+#board-svg .cell-interactive { cursor: pointer; }
+#board-svg .cell-interactive:hover { stroke: rgba(255,255,255,0.4); stroke-width: 1.5; }
+#board-svg .highlight { fill: rgba(0,128,255,0.25); stroke: #0080ff; stroke-width: 2; pointer-events: none; }
+#board-svg .highlight-action { fill: rgba(255,200,0,0.2); stroke: #ffc800; stroke-width: 2; pointer-events: none; }
 #board-svg .pawn { stroke: #000; stroke-width: 1.5; }
 #board-svg .fortify-dot { fill: #fff; stroke: #333; stroke-width: 0.5; }
-#board-svg .owner-border { fill: none; stroke-width: 3; rx: 3; pointer-events: none; }
+#board-svg .owner-border { fill: none; stroke-width: 2.5; pointer-events: none; }
 
 /* Controls bar */
 #controls-bar {
@@ -182,6 +179,7 @@ body {
   border-left: 1px solid #333;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 #log-panel h3 {
   font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
@@ -274,6 +272,7 @@ body {
   <div class="go-panel">
     <h2 id="go-title"></h2>
     <p id="go-detail"></p>
+    <button class="big-btn" onclick="exportLog()" style="border-color:#44cc88;color:#8dc;margin-bottom:8px">Export Log</button>
     <button class="big-btn" onclick="location.reload()">New Game</button>
   </div>
 </div>
@@ -305,6 +304,7 @@ const SPACE_TYPES = {
   EVENTS:       'events',
   INTERSECTION: 'intersection',
   PATH:         'path',
+  SIDE_STREET:  'sideStreet',
 };
 
 function defaultSpaceState() {
@@ -721,7 +721,7 @@ class Game {
         return { gameOver: true, winner: p.id, reason: 'territory threshold' };
       }
     }
-    if (this.turnNumber > 0) {
+    if (this.turnNumber > 2) {
       const wt = this.players.filter(p => this.board.getTerritoriesOwnedBy(p.id).length > 0);
       if (wt.length === 1) {
         this.gameOver = true; this.winner = wt[0].id;
@@ -783,36 +783,133 @@ class Game {
 //  CONSTANTS & GLOBALS
 // ═══════════════════════════════════════════════════════════════════════
 
-const TYPE_COLOURS = {
-  [SPACE_TYPES.SIDEWALK]:     '#8a8a9a',
-  [SPACE_TYPES.TERRITORY]:    '#5ea040',
-  [SPACE_TYPES.HOME]:         '#c8a030',
-  [SPACE_TYPES.WATER_SOURCE]: '#3090c0',
-  [SPACE_TYPES.CHANCE_SPOT]:  '#a060a0',
-  [SPACE_TYPES.DOG_PARK]:     '#30a068',
-  [SPACE_TYPES.EVENTS]:       '#c07030',
-  [SPACE_TYPES.INTERSECTION]: '#707080',
-  [SPACE_TYPES.PATH]:         '#a08860',
-};
-const TYPE_ABBREV = {
-  [SPACE_TYPES.SIDEWALK]: 'SW', [SPACE_TYPES.TERRITORY]: 'TR',
-  [SPACE_TYPES.HOME]: 'HM', [SPACE_TYPES.WATER_SOURCE]: 'WS', [SPACE_TYPES.CHANCE_SPOT]: 'CS',
-  [SPACE_TYPES.DOG_PARK]: 'DP', [SPACE_TYPES.EVENTS]: 'EV', [SPACE_TYPES.INTERSECTION]: 'IX',
-  [SPACE_TYPES.PATH]: 'PT',
-};
 const COLOUR_HEX = { blue: '#5080e0', purple: '#9060c0', orange: '#e0a050', yellow: '#e0d050' };
 const COLOUR_ORDER = ['blue', 'purple', 'orange', 'yellow'];
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const CELL = 64;
-const SPACE_SZ = 52;
+
+// ── Stamp footprints (inlined from board-builder) ──
+
+const COMPOUND_FP = [
+  // rot 0  N — yard on top
+  [{dr:0,dc:0,sub:'yard'},{dr:0,dc:1,sub:'yard'},
+   {dr:1,dc:0,sub:'house'},{dr:1,dc:1,sub:'house'},
+   {dr:2,dc:0,sub:'house'},{dr:2,dc:1,sub:'house'}],
+  // rot 1  E — yard on right
+  [{dr:0,dc:0,sub:'house'},{dr:0,dc:1,sub:'house'},{dr:0,dc:2,sub:'yard'},
+   {dr:1,dc:0,sub:'house'},{dr:1,dc:1,sub:'house'},{dr:1,dc:2,sub:'yard'}],
+  // rot 2  S — yard on bottom
+  [{dr:0,dc:0,sub:'house'},{dr:0,dc:1,sub:'house'},
+   {dr:1,dc:0,sub:'house'},{dr:1,dc:1,sub:'house'},
+   {dr:2,dc:0,sub:'yard'},{dr:2,dc:1,sub:'yard'}],
+  // rot 3  W — yard on left
+  [{dr:0,dc:0,sub:'yard'},{dr:0,dc:1,sub:'house'},{dr:0,dc:2,sub:'house'},
+   {dr:1,dc:0,sub:'yard'},{dr:1,dc:1,sub:'house'},{dr:1,dc:2,sub:'house'}],
+];
+
+const STAMP_FP = {
+  sidewalk: {
+    fp: [
+      [{dr:0,dc:0,sub:'main'},{dr:0,dc:1,sub:'main'}],
+      [{dr:0,dc:0,sub:'main'},{dr:1,dc:0,sub:'main'}],
+    ],
+    colors: {main:'#d4b896'},
+  },
+  road: {
+    fp: [
+      [{dr:0,dc:0,sub:'main'},{dr:1,dc:0,sub:'main'}],
+      [{dr:0,dc:0,sub:'main'},{dr:0,dc:1,sub:'main'}],
+    ],
+    colors: {main:'#888888'},
+  },
+  intersection: {
+    fp: [[{dr:0,dc:0,sub:'main'}]],
+    colors: {main:'#aaaaaa'},
+  },
+  territory: {
+    fp: COMPOUND_FP,
+    colors: {yard:'#7ec850', house:'#c87850'},
+  },
+  home: {
+    fp: COMPOUND_FP,
+    colors: {yard:'#88aaff', house:'#4477dd'},
+  },
+  dogPark: {
+    fp: [[{dr:0,dc:0,sub:'main'}]],
+    colors: {main:'#40c080'},
+  },
+  waterPark: {
+    fp: [[{dr:0,dc:0,sub:'main'}]],
+    colors: {main:'#40a8a0'},
+  },
+  pathStraight: {
+    fp: [
+      [{dr:0,dc:0,sub:'main'},{dr:0,dc:1,sub:'main'}],
+      [{dr:0,dc:0,sub:'main'},{dr:1,dc:0,sub:'main'}],
+    ],
+    colors: {main:'#c8a878'},
+  },
+  pathCorner: {
+    fp: [
+      [{dr:0,dc:0,sub:'main'},{dr:0,dc:1,sub:'main'},{dr:1,dc:0,sub:'main'},{dr:1,dc:1,sub:'main'}],
+      [{dr:0,dc:0,sub:'main'},{dr:0,dc:1,sub:'main'},{dr:1,dc:0,sub:'main'},{dr:1,dc:1,sub:'main'}],
+      [{dr:0,dc:0,sub:'main'},{dr:0,dc:1,sub:'main'},{dr:1,dc:0,sub:'main'},{dr:1,dc:1,sub:'main'}],
+      [{dr:0,dc:0,sub:'main'},{dr:0,dc:1,sub:'main'},{dr:1,dc:0,sub:'main'},{dr:1,dc:1,sub:'main'}],
+    ],
+    colors: {main:'#c8a878'},
+  },
+  sidewalk3: {
+    fp: [
+      [{dr:0,dc:0,sub:'main'},{dr:0,dc:1,sub:'main'},{dr:0,dc:2,sub:'main'}],
+      [{dr:0,dc:0,sub:'main'},{dr:1,dc:0,sub:'main'},{dr:2,dc:0,sub:'main'}],
+    ],
+    colors: {main:'#d4b896'},
+  },
+  road3: {
+    fp: [
+      [{dr:0,dc:0,sub:'main'},{dr:1,dc:0,sub:'main'},{dr:2,dc:0,sub:'main'}],
+      [{dr:0,dc:0,sub:'main'},{dr:0,dc:1,sub:'main'},{dr:0,dc:2,sub:'main'}],
+    ],
+    colors: {main:'#888888'},
+  },
+  pathStraight3: {
+    fp: [
+      [{dr:0,dc:0,sub:'main'},{dr:0,dc:1,sub:'main'},{dr:0,dc:2,sub:'main'}],
+      [{dr:0,dc:0,sub:'main'},{dr:1,dc:0,sub:'main'},{dr:2,dc:0,sub:'main'}],
+    ],
+    colors: {main:'#c8a878'},
+  },
+};
+
+const HOME_PLAYER_COLORS = {
+  blue:   {yard:'#88aaff', house:'#4477dd'},
+  purple: {yard:'#cc88ff', house:'#8844cc'},
+  orange: {yard:'#ffbb66', house:'#dd8833'},
+  yellow: {yard:'#ffee66', house:'#ccbb33'},
+};
+
+function getStampCells(type, rot) {
+  const s = STAMP_FP[type];
+  if (!s) return [];
+  return s.fp[rot % s.fp.length];
+}
+
+function getCellColor(type, sub, playerColour) {
+  if (type === 'home' && playerColour && HOME_PLAYER_COLORS[playerColour])
+    return HOME_PLAYER_COLORS[playerColour][sub] || '#888';
+  return STAMP_FP[type]?.colors[sub] || '#555';
+}
 
 let boardData = null;       // raw JSON
 let board = null;           // Board instance
 let game = null;            // Game instance
 let playerConfigs = [];     // { id, name, archetype, isAI, homeSpaceId, colour }
-let positions = {};         // spaceId → { x, y } in SVG coords
+let positions = {};         // spaceId → { x, y } in SVG coords (first cell center)
+let cellToSpaceId = {};     // "row,col" → spaceId
+let spaceIdToCells = {};    // spaceId → [{row,col}, ...]
+let gridRows = 0, gridCols = 0;
 let svgEl = null;
-let layerEdges, layerSpaces, layerOverlay, layerHighlight, layerPawns;
+let layerCells, layerOverlay, layerHighlight, layerPawns;
 
 // Interaction promises
 let _resolveSpaceClick = null;
@@ -949,18 +1046,40 @@ function onStartGame() {
 
 function buildPositionMap() {
   positions = {};
+  cellToSpaceId = {};
+  spaceIdToCells = {};
+  gridRows = 0;
+  gridCols = 0;
+
+  if (boardData._grid) {
+    gridRows = boardData._grid.rows || 0;
+    gridCols = boardData._grid.cols || 0;
+  }
+
   if (boardData._positions && boardData._positions.length > 0) {
     for (const p of boardData._positions) {
-      positions[p.id] = { x: p.col * CELL + CELL / 2, y: p.row * CELL + CELL / 2 };
+      const key = `${p.row},${p.col}`;
+      cellToSpaceId[key] = p.id;
+      if (!spaceIdToCells[p.id]) spaceIdToCells[p.id] = [];
+      spaceIdToCells[p.id].push({ row: p.row, col: p.col });
+      // First occurrence becomes the pawn position
+      if (!positions[p.id]) {
+        positions[p.id] = { x: p.col * CELL + CELL / 2, y: p.row * CELL + CELL / 2 };
+      }
     }
   } else {
     // Fallback: arrange in a grid
     const count = boardData.spaces.length;
     const cols = Math.ceil(Math.sqrt(count * 1.5));
+    gridCols = cols;
+    gridRows = Math.ceil(count / cols);
     boardData.spaces.forEach((s, i) => {
       const col = i % cols;
       const row = Math.floor(i / cols);
       positions[s.id] = { x: col * CELL + CELL / 2, y: row * CELL + CELL / 2 };
+      const key = `${row},${col}`;
+      cellToSpaceId[key] = s.id;
+      spaceIdToCells[s.id] = [{ row, col }];
     });
   }
 }
@@ -973,90 +1092,53 @@ function buildBoardSVG() {
   svgEl = document.getElementById('board-svg');
   svgEl.innerHTML = '';
 
-  // Compute viewBox
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (const p of Object.values(positions)) {
-    minX = Math.min(minX, p.x); minY = Math.min(minY, p.y);
-    maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y);
-  }
-  const pad = CELL;
-  svgEl.setAttribute('viewBox', `${minX - pad} ${minY - pad} ${maxX - minX + pad * 2} ${maxY - minY + pad * 2}`);
-  svgEl.setAttribute('width', maxX - minX + pad * 2);
-  svgEl.setAttribute('height', maxY - minY + pad * 2);
+  // ViewBox from grid dimensions
+  const vw = gridCols * CELL;
+  const vh = gridRows * CELL;
+  svgEl.setAttribute('viewBox', `0 0 ${vw} ${vh}`);
+  svgEl.setAttribute('width', vw);
+  svgEl.setAttribute('height', vh);
+
+  // Background
+  const bg = svgCreate('rect', { x: 0, y: 0, width: vw, height: vh, fill: '#2a2a3e' });
+  svgEl.appendChild(bg);
 
   // Layers
-  layerEdges     = svgG('edges-layer');
-  layerSpaces    = svgG('spaces-layer');
+  layerCells     = svgG('cells-layer');
   layerOverlay   = svgG('overlay-layer');
   layerHighlight = svgG('highlight-layer');
   layerPawns     = svgG('pawns-layer');
-  svgEl.append(layerEdges, layerSpaces, layerOverlay, layerHighlight, layerPawns);
+  svgEl.append(layerCells, layerOverlay, layerHighlight, layerPawns);
 
-  // Draw edges
-  const seen = new Set();
-  for (const [fid, conns] of board.edges) {
-    for (const c of conns) {
-      const key = [fid, c.target].sort().join('|');
-      if (seen.has(key)) continue; seen.add(key);
-      const p1 = positions[fid], p2 = positions[c.target];
-      if (!p1 || !p2) continue;
-      const line = svgCreate('line', {
-        x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y,
-        class: 'edge-line' + (c.driveCost > 0 ? ' costly' : ''),
-      });
-      layerEdges.appendChild(line);
-      if (c.driveCost > 0) {
-        const mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2;
-        const lbl = svgCreate('text', { x: mx + 6, y: my - 4, class: 'edge-cost-label' });
-        lbl.textContent = c.driveCost;
-        layerEdges.appendChild(lbl);
+  // Paint grid components
+  if (boardData._grid && boardData._grid.components) {
+    for (const comp of boardData._grid.components) {
+      const cells = getStampCells(comp.type, comp.rotation);
+      for (const cell of cells) {
+        const absRow = comp.row + cell.dr;
+        const absCol = comp.col + cell.dc;
+        const x = absCol * CELL;
+        const y = absRow * CELL;
+        const fill = getCellColor(comp.type, cell.sub, comp.playerColour);
+        const key = `${absRow},${absCol}`;
+        const spaceId = cellToSpaceId[key] || null;
+
+        const rect = svgCreate('rect', {
+          x, y, width: CELL, height: CELL,
+          fill,
+          class: 'cell-rect' + (spaceId ? ' cell-interactive' : ''),
+        });
+        if (spaceId) rect.dataset.spaceId = spaceId;
+        layerCells.appendChild(rect);
       }
     }
   }
 
-  // Draw spaces (static rectangles)
-  for (const s of board.getAllSpaces()) {
-    const pos = positions[s.id];
-    if (!pos) continue;
-    const g = svgG();
-    g.dataset.spaceId = s.id;
-
-    const rect = svgCreate('rect', {
-      x: pos.x - SPACE_SZ / 2, y: pos.y - SPACE_SZ / 2,
-      width: SPACE_SZ, height: SPACE_SZ, rx: 4,
-      fill: TYPE_COLOURS[s.type] || '#555',
-      class: 'space-rect',
-    });
-    rect.dataset.spaceId = s.id;
-    g.appendChild(rect);
-
-    // Type abbreviation
-    const abbr = svgCreate('text', {
-      x: pos.x, y: pos.y - 4,
-      'text-anchor': 'middle', 'dominant-baseline': 'middle',
-      class: 'space-type-label',
-    });
-    abbr.textContent = TYPE_ABBREV[s.type] || '??';
-    g.appendChild(abbr);
-
-    // ID label
-    const idLbl = svgCreate('text', {
-      x: pos.x, y: pos.y + 12,
-      'text-anchor': 'middle', 'dominant-baseline': 'middle',
-      class: 'space-label',
-    });
-    const short = s.id.length > 8 ? s.id.slice(0, 8) + '..' : s.id;
-    idLbl.textContent = short;
-    g.appendChild(idLbl);
-
-    layerSpaces.appendChild(g);
-  }
-
   // Click handler (event delegation)
   svgEl.addEventListener('click', (e) => {
-    const rect = e.target.closest('[data-space-id]');
-    if (!rect) return;
-    const sid = rect.dataset.spaceId;
+    const el = e.target.closest('[data-space-id]');
+    if (!el) return;
+    const sid = el.dataset.spaceId;
     if (_resolveSpaceClick && _validSpaceIds && _validSpaceIds.includes(sid)) {
       _resolveSpaceClick(sid);
       _resolveSpaceClick = null;
@@ -1068,36 +1150,44 @@ function buildBoardSVG() {
 function updateOverlay() {
   layerOverlay.innerHTML = '';
   for (const s of board.getAllSpaces()) {
-    const pos = positions[s.id];
-    if (!pos) continue;
+    const cells = spaceIdToCells[s.id];
+    if (!cells || cells.length === 0) continue;
 
-    // Ownership border
+    // Ownership border — draw on each cell
     if (s.owner) {
       const cfg = playerConfigs.find(c => c.id === s.owner);
       if (cfg) {
-        const ownerRect = svgCreate('rect', {
-          x: pos.x - SPACE_SZ / 2 - 1, y: pos.y - SPACE_SZ / 2 - 1,
-          width: SPACE_SZ + 2, height: SPACE_SZ + 2,
-          stroke: COLOUR_HEX[cfg.colour] || cfg.colour, class: 'owner-border',
-        });
-        layerOverlay.appendChild(ownerRect);
+        const colour = COLOUR_HEX[cfg.colour] || cfg.colour;
+        for (const cell of cells) {
+          const ownerRect = svgCreate('rect', {
+            x: cell.col * CELL + 1, y: cell.row * CELL + 1,
+            width: CELL - 2, height: CELL - 2,
+            stroke: colour, class: 'owner-border',
+          });
+          layerOverlay.appendChild(ownerRect);
+        }
       }
     }
 
-    // Fortify tokens (small white dots along the bottom)
-    for (let f = 0; f < s.fortifyTokens; f++) {
-      const fx = pos.x - 10 + f * 10;
-      const fy = pos.y + SPACE_SZ / 2 - 8;
-      const dot = svgCreate('circle', { cx: fx, cy: fy, r: 3.5, class: 'fortify-dot' });
-      layerOverlay.appendChild(dot);
+    // Fortify tokens (small white dots on first cell)
+    if (s.fortifyTokens > 0) {
+      const fc = cells[0];
+      const cx = fc.col * CELL + CELL / 2;
+      const cy = fc.row * CELL + CELL - 10;
+      for (let f = 0; f < s.fortifyTokens; f++) {
+        const fx = cx - 10 + f * 10;
+        const dot = svgCreate('circle', { cx: fx, cy, r: 3.5, class: 'fortify-dot' });
+        layerOverlay.appendChild(dot);
+      }
     }
 
     // Pending alliance marker at dog parks
     if (game && s.type === SPACE_TYPES.DOG_PARK && game.pendingAlliances.has(s.id)) {
       const initId = game.pendingAlliances.get(s.id);
       const initCfg = playerConfigs.find(c => c.id === initId);
+      const fc = cells[0];
       const heart = svgCreate('text', {
-        x: pos.x, y: pos.y - SPACE_SZ / 2 + 10,
+        x: fc.col * CELL + CELL / 2, y: fc.row * CELL + 14,
         'text-anchor': 'middle', 'dominant-baseline': 'middle',
         fill: initCfg ? (COLOUR_HEX[initCfg.colour] || initCfg.colour) : '#e05080',
         'font-size': '14px',
@@ -1143,14 +1233,16 @@ function updatePawns() {
 function highlightSpaces(ids, cls = 'highlight') {
   layerHighlight.innerHTML = '';
   for (const id of ids) {
-    const pos = positions[id];
-    if (!pos) continue;
-    const r = svgCreate('rect', {
-      x: pos.x - SPACE_SZ / 2 - 2, y: pos.y - SPACE_SZ / 2 - 2,
-      width: SPACE_SZ + 4, height: SPACE_SZ + 4,
-      class: cls,
-    });
-    layerHighlight.appendChild(r);
+    const cells = spaceIdToCells[id];
+    if (!cells) continue;
+    for (const cell of cells) {
+      const r = svgCreate('rect', {
+        x: cell.col * CELL, y: cell.row * CELL,
+        width: CELL, height: CELL,
+        class: cls,
+      });
+      layerHighlight.appendChild(r);
+    }
   }
 }
 function clearHighlights() { layerHighlight.innerHTML = ''; }
@@ -1777,6 +1869,39 @@ function showGameOver() {
   document.getElementById('go-detail').textContent = detail;
   document.getElementById('go-detail').style.whiteSpace = 'pre-line';
   document.getElementById('game-over').classList.add('visible');
+}
+
+function exportLog() {
+  const lines = [];
+  // Header
+  lines.push('Uri-Nation Game Log');
+  lines.push('='.repeat(40));
+  lines.push(`Date: ${new Date().toISOString()}`);
+  lines.push(`Rounds: ${game.turnNumber}`);
+  lines.push(`Winner: ${getConfig(game.winner)?.name || game.winner}`);
+  lines.push('');
+  // Players
+  lines.push('Players:');
+  for (const p of game.players) {
+    const c = getConfig(p.id);
+    const terr = board.getTerritoriesOwnedBy(p.id).length;
+    lines.push(`  ${c.name} (${ARCHETYPES[c.archetype].name}) — ${terr} territories, W:${p.water} Sw:${p.swagger} Dr:${p.drive} Gr:${p.grit} Bd:${p.bond}`);
+  }
+  lines.push('');
+  // Full engine log
+  lines.push('Game Log:');
+  lines.push('-'.repeat(40));
+  for (const entry of game.log) {
+    const prefix = entry.player ? `[${getConfig(entry.player)?.name || entry.player}] ` : '';
+    lines.push(`R${entry.turn} ${prefix}${entry.message}`);
+  }
+
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `game-log-${new Date().toISOString().slice(0,10)}.txt`;
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
 // ═══════════════════════════════════════════════════════════════════════
