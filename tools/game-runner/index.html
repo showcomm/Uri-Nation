@@ -1509,16 +1509,39 @@ async function runGame() {
 
       setPhase(`${cfg.name} — Move`);
       let path;
-      if (cfg.isClaude || cfg.isAI) {
-        // Algorithmic movement for both AI types
-        path = aiComputePath(player, maxSteps);
-        // Animate AI movement step by step
+      if (cfg.isClaude) {
+        // Claude goal-based movement: pick a goal, then BFS toward it
+        if (!aiGoals[player.id]) {
+          setPhase(`${cfg.name} — Thinking...`);
+          try {
+            aiGoals[player.id] = await claudePickGoal(player);
+          } catch (err) {
+            console.warn('claudePickGoal failed, falling back', err);
+            addLogEntry(`  ${cfg.name}: goal pick failed (${err.message}), using algo`, 'system');
+            aiGoals[player.id] = algoPickGoal(player);
+          }
+        }
+        const goal = aiGoals[player.id];
+        if (goal) {
+          path = bfsTowardTarget(player, maxSteps, [goal.spaceId]);
+        } else {
+          path = aiComputePath(player, maxSteps);
+        }
         for (let i = 1; i < path.length; i++) {
           await delay(250);
-          player.position = path[i]; // temp for visual
+          player.position = path[i];
           updatePawns();
         }
-        player.position = path[0]; // reset for movePlayer
+        player.position = path[0];
+      } else if (cfg.isAI) {
+        // Algorithmic AI: score-based movement
+        path = aiComputePath(player, maxSteps);
+        for (let i = 1; i < path.length; i++) {
+          await delay(250);
+          player.position = path[i];
+          updatePawns();
+        }
+        player.position = path[0];
       } else {
         path = await humanBuildPath(player, maxSteps);
       }
@@ -1560,17 +1583,28 @@ async function runGame() {
       // Phase 3: Action
       setPhase(`${cfg.name} — Action`);
       if (cfg.isClaude) {
-        const available = getActionableSpaces(player);
-        if (available.flatMap(a => a.actions).length > 0) {
-          setPhase(`${cfg.name} — Thinking...`);
-          try {
-            await claudePickAction(player, cfg, available);
-          } catch (err) {
-            addLogEntry(`  ${cfg.name}: Claude action error, falling back. (${err.message})`, 'system');
-            await aiDoAction(player, cfg);
+        // Check if we reached the goal
+        const goal = aiGoals[player.id];
+        const reached = !goal || player.position === goal.spaceId;
+        if (reached) {
+          aiGoals[player.id] = null; // clear goal, pick new one next turn
+          // If at home, resupply is handled in Phase 4 — no action needed
+          if (!passedHome) {
+            const available = getActionableSpaces(player);
+            if (available.flatMap(a => a.actions).length > 0) {
+              setPhase(`${cfg.name} — Thinking...`);
+              try {
+                await claudePickAction(player, cfg, available);
+              } catch (err) {
+                addLogEntry(`  ${cfg.name}: Claude action error, falling back. (${err.message})`, 'system');
+                await aiDoAction(player, cfg);
+              }
+            } else {
+              addLogEntry(`  ${cfg.name}: no actions at this position.`, 'system');
+            }
           }
         } else {
-          addLogEntry(`  ${cfg.name}: no actions at this position.`, 'system');
+          addLogEntry(`  ${cfg.name}: en route to goal...`, 'system');
         }
       } else if (cfg.isAI) {
         await aiDoAction(player, cfg);
@@ -1875,6 +1909,217 @@ function bfsDistances(startId) {
     }
   }
   return dist;
+}
+
+// ── Claude goal-picking: asks Claude WHERE to go, algo handles HOW ──
+
+const aiGoals = {};  // playerId → { type, spaceId } or null
+
+async function claudePickGoal(player) {
+  const arch = ARCHETYPES[player.archetype];
+  const myName = getConfig(player.id).name;
+  const myTerritories = board.getTerritoriesOwnedBy(player.id);
+
+  // Build candidate destinations with sidewalk IDs resolved
+  const candidates = [];
+
+  // Home turf
+  const homeAdjacentSidewalks = board.getNeighbors(
+    board.getHomeSpace(player.id, game.players).id
+  ).filter(n => WALKABLE.includes(n.space.type));
+  if (homeAdjacentSidewalks.length > 0) {
+    candidates.push({
+      label: `go home (full resupply: W:${arch.water} Sw:${arch.swagger} Dr:${arch.drive} Gr:${arch.grit} Bd:${arch.bond})`,
+      type: 'home',
+      spaceId: homeAdjacentSidewalks[0].space.id
+    });
+  }
+
+  // Water sources
+  for (const ws of board.getSpacesByType(SPACE_TYPES.WATER_SOURCE)) {
+    const adj = board.getNeighbors(ws.id).filter(n => WALKABLE.includes(n.space.type));
+    if (adj.length > 0) {
+      candidates.push({
+        label: `drink at ${ws.id} (restores water to ${arch.water} only, costs 1 drive)`,
+        type: 'water',
+        spaceId: adj[0].space.id
+      });
+    }
+  }
+
+  // Unclaimed territories (closest 6)
+  const dists = bfsDistances(player.position);
+  const unclaimed = board.getAllSpaces()
+    .filter(s => s.type === SPACE_TYPES.TERRITORY && s.owner === null)
+    .map(s => {
+      const adj = board.getNeighbors(s.id).filter(n => WALKABLE.includes(n.space.type));
+      const sidewalkId = adj[0]?.space.id;
+      const dist = sidewalkId ? (dists[sidewalkId] ?? 999) : 999;
+      return { s, sidewalkId, dist };
+    })
+    .filter(x => x.sidewalkId)
+    .sort((a, b) => a.dist - b.dist)
+    .slice(0, 6);
+
+  for (const { s, sidewalkId, dist } of unclaimed) {
+    candidates.push({
+      label: `claim ${s.id} (empty territory, ~${dist} steps away)`,
+      type: 'territory',
+      spaceId: sidewalkId
+    });
+  }
+
+  // Opponent territories (closest 4, unfortified preferred)
+  const opponent = board.getAllSpaces()
+    .filter(s => s.type === SPACE_TYPES.TERRITORY && s.owner && s.owner !== player.id)
+    .map(s => {
+      const adj = board.getNeighbors(s.id).filter(n => WALKABLE.includes(n.space.type));
+      const sidewalkId = adj[0]?.space.id;
+      const dist = sidewalkId ? (dists[sidewalkId] ?? 999) : 999;
+      const ownerCfg = getConfig(s.owner);
+      return { s, sidewalkId, dist, ownerCfg };
+    })
+    .filter(x => x.sidewalkId)
+    .sort((a, b) => a.dist - b.dist)
+    .slice(0, 4);
+
+  for (const { s, sidewalkId, dist, ownerCfg } of opponent) {
+    candidates.push({
+      label: `challenge ${s.id} (owned by ${ownerCfg.name}${s.fortifyTokens ? ', fortified' : ', unfortified'}, ~${dist} steps away)`,
+      type: 'territory',
+      spaceId: sidewalkId
+    });
+  }
+
+  // Dog parks
+  for (const dp of board.getSpacesByType(SPACE_TYPES.DOG_PARK)) {
+    const adj = board.getNeighbors(dp.id).filter(n => WALKABLE.includes(n.space.type));
+    if (adj.length > 0) {
+      const hasBond = game.pendingAlliances.has(dp.id);
+      candidates.push({
+        label: `go to dog park ${dp.id} (${hasBond ? 'active bond — compulsory join costs 1 water' : 'initiate alliance costs 1 water + 1 bond'})`,
+        type: 'dogpark',
+        spaceId: adj[0].space.id
+      });
+    }
+  }
+
+  if (candidates.length === 0) throw new Error('No candidates');
+
+  const otherPlayers = game.players
+    .filter(p => p.id !== player.id)
+    .map(p => {
+      const cfg = getConfig(p.id);
+      const tc = board.getTerritoriesOwnedBy(p.id).length;
+      return `  ${cfg.name}: ${tc} territories, W:${p.water} Sw:${p.swagger} Dr:${p.drive} Gr:${p.grit}`;
+    }).join('\n');
+
+  const prompt = `You are playing Uri-Nation. Choose where to go next.
+
+GOAL: First to 15 territories wins. After 30 rounds, most territories wins.
+
+KEY RULES:
+- Claiming costs 2 water + 1 swagger. If swagger = 0, you CANNOT claim — go home first.
+- Challenging costs 2 water + 1 drive. Winning also needs 1 swagger or grit to convert.
+- Home turf restores ALL resources (water, swagger, drive, grit, bond) to your max.
+- Water sources restore WATER ONLY. They do not restore swagger or drive.
+- If swagger = 0 and grit = 0, going to a water source is pointless — go home.
+
+YOUR STATE:
+- ${myName} (${player.archetype}): ${myTerritories.length} territories
+- Resources: W:${player.water}/${arch.water} Sw:${player.swagger} Dr:${player.drive} Gr:${player.grit} Bd:${player.bond}
+- Round: ${game.turnNumber}/30
+
+OTHER PLAYERS:
+${otherPlayers}
+
+WHERE CAN YOU GO:
+${candidates.map((c, i) => `  ${i + 1}. ${c.label}`).join('\n')}
+
+Pick the destination that best advances your position. If you have no swagger and no grit, home is almost always the right answer. Respond JSON only:
+{
+  "choice": <number from list above>,
+  "reasoning": "one sentence why"
+}`;
+
+  const apiKey = sessionStorage.getItem('anthropic_api_key');
+  if (!apiKey) throw new Error('No API key configured');
+
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 200,
+      messages: [{ role: 'user', content: prompt }],
+    }),
+  });
+
+  if (!resp.ok) {
+    const errText = await resp.text().catch(() => '');
+    throw new Error(`API ${resp.status}: ${errText.slice(0, 200)}`);
+  }
+  const data = await resp.json();
+  const raw = (data.content.find(b => b.type === 'text')?.text) || '';
+  const start = raw.indexOf('{');
+  const end = raw.lastIndexOf('}');
+  if (start === -1 || end === -1) throw new Error('No JSON found in response');
+  const json = JSON.parse(raw.slice(start, end + 1));
+
+  const chosen = candidates[json.choice - 1];
+  if (!chosen) throw new Error('Invalid choice index: ' + json.choice);
+
+  // Log the reasoning
+  const myNameForLog = getConfig(player.id).name;
+  addLogEntry(`[goal] ${myNameForLog} → ${chosen.label} — ${json.reasoning}`, 'reasoning');
+  game._log(player.id, `[goal] ${chosen.label} — ${json.reasoning}`);
+
+  return { type: chosen.type, spaceId: chosen.spaceId };
+}
+
+// ── Algorithmic goal fallback (mirrors scoreWalkableDest priorities) ──
+
+function algoPickGoal(player) {
+  const arch = ARCHETYPES[player.archetype];
+  const dists = bfsDistances(player.position);
+
+  // If we can't claim or challenge, go home
+  if (player.swagger === 0 && player.grit === 0 && player.water < 2) {
+    const homeSidewalks = getHomeSidewalks(player);
+    if (homeSidewalks.length > 0) return { type: 'home', spaceId: homeSidewalks[0] };
+  }
+
+  // If very low water, go home
+  if (player.water < 2 && player.swagger === 0) {
+    const homeSidewalks = getHomeSidewalks(player);
+    if (homeSidewalks.length > 0) return { type: 'home', spaceId: homeSidewalks[0] };
+  }
+
+  // Find closest unclaimed territory we can afford to claim
+  if (player.water >= 2 && player.swagger >= 1) {
+    const unclaimed = board.getAllSpaces()
+      .filter(s => s.type === SPACE_TYPES.TERRITORY && s.owner === null)
+      .map(s => {
+        const adj = board.getNeighbors(s.id).filter(n => WALKABLE.includes(n.space.type));
+        const sidewalkId = adj[0]?.space.id;
+        const dist = sidewalkId ? (dists[sidewalkId] ?? 999) : 999;
+        return { sidewalkId, dist };
+      })
+      .filter(x => x.sidewalkId)
+      .sort((a, b) => a.dist - b.dist);
+    if (unclaimed.length > 0) return { type: 'territory', spaceId: unclaimed[0].sidewalkId };
+  }
+
+  // Default: go home
+  const homeSidewalks = getHomeSidewalks(player);
+  if (homeSidewalks.length > 0) return { type: 'home', spaceId: homeSidewalks[0] };
+
+  return null;
 }
 
 // ── Claude action-only decision (movement handled by algorithmic AI) ──
