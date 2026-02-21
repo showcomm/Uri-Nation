@@ -1564,8 +1564,9 @@ async function humanBuildPath(player, maxSteps) {
 
   while (stepsLeft > 0) {
     const current = path[path.length - 1];
+    const WALKABLE = ['sidewalk', 'intersection', 'sideStreet', 'path'];
     const reachable = board.getNeighbors(current).filter(n =>
-      !path.includes(n.space.id) && (accDriveCost + n.driveCost) <= player.drive
+      WALKABLE.includes(n.space.type) && !path.includes(n.space.id) && (accDriveCost + n.driveCost) <= player.drive
     );
     if (reachable.length === 0) break;
 
@@ -1851,7 +1852,9 @@ function bfsReachable(player, maxSteps) {
     const [curId, steps, drCost, parentId] = queue.shift();
     if (steps >= maxSteps) continue;
 
+    const WALKABLE = ['sidewalk', 'intersection', 'sideStreet', 'path'];
     for (const n of board.getNeighbors(curId)) {
+      if (!WALKABLE.includes(n.space.type)) continue;
       const nId = n.space.id;
       const newDrive = drCost + n.driveCost;
       if (newDrive > player.drive) continue;
