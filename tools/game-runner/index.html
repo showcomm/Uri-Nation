@@ -197,6 +197,7 @@ body {
 .log-entry.action { color: #7ec850; }
 .log-entry.challenge { color: #e07040; }
 .log-entry.system { color: #4488cc; }
+.log-entry.reasoning { color: #b080d0; font-style: italic; }
 
 /* Game over overlay */
 #game-over {
@@ -234,6 +235,13 @@ body {
       <label>Players</label>
       <div class="player-count-btns" id="count-btns"></div>
       <div id="player-configs"></div>
+    </div>
+
+    <div class="setup-section" id="api-key-section" style="display:none">
+      <label>Anthropic API Key (required for Claude AI players)</label>
+      <input type="password" id="api-key-input" placeholder="sk-ant-..."
+             style="width:100%; padding:5px 8px; background:#1a1a2e; border:1px solid #555; border-radius:4px; color:#fff; font-size:12px;" />
+      <div style="font-size:11px; color:#666; margin-top:4px;">Key is stored in sessionStorage only. Never sent anywhere except the Anthropic API.</div>
     </div>
 
     <button id="btn-start" class="big-btn" disabled>Start Game</button>
@@ -959,11 +967,28 @@ function buildPlayerConfigRows(count) {
       </select>
       <select data-field="control">
         <option value="human" ${i === 0 ? 'selected' : ''}>Human</option>
-        <option value="ai" ${i > 0 ? 'selected' : ''}>AI</option>
+        <option value="ai">AI (Algorithmic)</option>
+        <option value="claude" ${i > 0 ? 'selected' : ''}>Claude AI</option>
       </select>
     `;
     container.appendChild(row);
   }
+
+  // Wire up control change listeners to show/hide API key section
+  container.querySelectorAll('[data-field="control"]').forEach(sel => {
+    sel.addEventListener('change', updateApiKeyVisibility);
+  });
+  updateApiKeyVisibility();
+
+  // Load saved API key
+  const savedKey = sessionStorage.getItem('anthropic_api_key');
+  if (savedKey) document.getElementById('api-key-input').value = savedKey;
+}
+
+function updateApiKeyVisibility() {
+  const controls = document.querySelectorAll('#player-configs [data-field="control"]');
+  const hasClaude = [...controls].some(sel => sel.value === 'claude');
+  document.getElementById('api-key-section').style.display = hasClaude ? 'block' : 'none';
 }
 
 function onStartGame() {
@@ -977,13 +1002,15 @@ function onStartGame() {
   for (let i = 0; i < rows.length; i++) {
     const name = rows[i].querySelector('[data-field="name"]').value.trim() || `Player ${i+1}`;
     const archetype = rows[i].querySelector('[data-field="archetype"]').value;
-    const isAI = rows[i].querySelector('[data-field="control"]').value === 'ai';
+    const controlVal = rows[i].querySelector('[data-field="control"]').value;
+    const isAI = controlVal === 'ai' || controlVal === 'claude';
+    const isClaude = controlVal === 'claude';
     const homeId = homes[i].id;
     const id = `p${i+1}`;
     // Read colour from the home space's playerColour field
     const homeSpace = board.getSpace(homeId);
     const colour = (homeSpace && homeSpace.playerColour) || COLOUR_ORDER[i];
-    playerConfigs.push({ id, name, archetype, isAI, homeSpaceId: homeId, colour });
+    playerConfigs.push({ id, name, archetype, isAI, isClaude, homeSpaceId: homeId, colour });
   }
 
   // Build position map from _positions
@@ -1002,6 +1029,10 @@ function onStartGame() {
       game._log(p.id, `starting claim: ${unclaimed.id}`);
     }
   }
+
+  // Save API key to sessionStorage
+  const apiKeyVal = document.getElementById('api-key-input').value.trim();
+  if (apiKeyVal) sessionStorage.setItem('anthropic_api_key', apiKeyVal);
 
   // Switch to game screen
   document.getElementById('setup-screen').style.display = 'none';
@@ -1476,7 +1507,26 @@ async function runGame() {
 
       setPhase(`${cfg.name} — Move`);
       let path;
-      if (cfg.isAI) {
+      let _claudeResponse = null;
+      if (cfg.isClaude) {
+        setPhase(`${cfg.name} — Thinking...`);
+        try {
+          const result = await claudePlayerTurn(player, cfg, maxSteps);
+          path = result.path;
+          _claudeResponse = result.response;
+        } catch (err) {
+          addLogEntry(`  ${cfg.name}: Claude API error — falling back to algorithmic AI. (${err.message})`, 'system');
+          path = aiComputePath(player, maxSteps);
+        }
+        // Animate movement step by step
+        setPhase(`${cfg.name} — Move`);
+        for (let i = 1; i < path.length; i++) {
+          await delay(250);
+          player.position = path[i];
+          updatePawns();
+        }
+        player.position = path[0]; // reset for movePlayer
+      } else if (cfg.isAI) {
         path = aiComputePath(player, maxSteps);
         // Animate AI movement step by step
         for (let i = 1; i < path.length; i++) {
@@ -1525,7 +1575,15 @@ async function runGame() {
 
       // Phase 3: Action
       setPhase(`${cfg.name} — Action`);
-      if (cfg.isAI) {
+      if (cfg.isClaude && _claudeResponse) {
+        await delay(800);
+        try {
+          await executeClaudeAction(player, cfg, _claudeResponse);
+        } catch (err) {
+          addLogEntry(`  ${cfg.name}: Claude action error — falling back. (${err.message})`, 'system');
+          await aiDoAction(player, cfg);
+        }
+      } else if (cfg.isAI) {
         await aiDoAction(player, cfg);
       } else {
         await humanDoAction(player, cfg);
@@ -1802,7 +1860,218 @@ async function doChallenge(player, cfg, targetId) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-//  AI PLAYER (goal-directed, priority-driven)
+//  CLAUDE AI PLAYER
+// ═══════════════════════════════════════════════════════════════════════
+
+const ARCHETYPE_PERSONALITY = {
+  bruiser:  'You are a Bruiser — aggressive and territory-hungry. You prioritize claiming and expanding your territory above all else. You use your high water reserves to dominate the board.',
+  scrapper: 'You are a Scrapper — combative and resourceful. You love challenging opponents for their territories. Your high drive lets you move aggressively across the board.',
+  diplomat: 'You are a Diplomat — alliance-focused and strategic. You prefer forming alliances over direct conflict. Challenges are a last resort. You build power through social connections.',
+  yapper:   'You are a Yapper — defensive and fortification-focused. You claim territory and then fortify it heavily. Your high grit makes you excellent at holding what you have.',
+};
+
+function buildPrompt(player, maxSteps, reachable) {
+  const cfg = getConfig(player.id);
+  const arch = ARCHETYPES[player.archetype];
+
+  const system = `You are an AI playing Uri-Nation, a dog territory board game. You must respond with ONLY valid JSON, no other text.
+
+RULES SUMMARY:
+- Players are dogs competing for territory by urine marking. Win by holding ${game.config.territoryWinThreshold} territories, or most territories after ${game.config.maxTurns} rounds.
+- Actions cost resources. Claim territory: 2 water + 1 swagger. Challenge opponent territory: 2 water + 1 drive. Fortify own territory: 1 water + 1 grit. Ally at dog park: 1 water + 1 bond. Drink at water source: 1 drive. Break alliance: 1 water + 1 swagger.
+- Challenge: both roll 1d6, attacker must roll HIGHER. Defender gets +fortify tokens bonus. If defender has 3+ connected territories (cluster), ties go to defender.
+- Territory income: +1 swagger per ${game.config.swaggerPerTerritories} territories each round.
+- Home resupply: passing/landing on home refills all resources to starting values.
+- You can only walk on sidewalks, intersections, side streets, and paths. Territories, homes, water sources, and dog parks are accessed from adjacent walkable spaces.
+- Fortify max: ${game.config.maxFortify} token per territory.
+
+${ARCHETYPE_PERSONALITY[player.archetype]}
+
+RESPONSE FORMAT — respond with ONLY this JSON, no markdown, no explanation outside the JSON:
+{
+  "moveTo": "space_id",
+  "action": "claim|challenge|fortify|ally|drink|shortcut|breakAlliance|pass",
+  "actionTarget": "target_id_or_null",
+  "reasoning": "Brief 1-sentence explanation"
+}`;
+
+  // Build destinations with available actions
+  const destinations = [];
+  for (const [destId, info] of reachable) {
+    const destActions = getActionsAtPosition(player, destId);
+    const actionList = destActions.flatMap(a => a.actions).map(a =>
+      `${a.type} ${a.targetId} (${a.cost})`
+    );
+
+    // Describe what's adjacent
+    const neighbors = board.getNeighbors(destId);
+    const nearbyDesc = [];
+    for (const n of neighbors) {
+      const s = n.space;
+      if (s.type === SPACE_TYPES.TERRITORY) {
+        if (s.owner === null) nearbyDesc.push(`unclaimed territory ${s.id}`);
+        else if (s.owner === player.id) nearbyDesc.push(`your territory ${s.id} (fortify:${s.fortifyTokens})`);
+        else {
+          const ownerCfg = getConfig(s.owner);
+          nearbyDesc.push(`${ownerCfg ? ownerCfg.name : s.owner}'s territory ${s.id} (fortify:${s.fortifyTokens})`);
+        }
+      }
+      if (s.type === SPACE_TYPES.WATER_SOURCE) nearbyDesc.push(`water source ${s.id}`);
+      if (s.type === SPACE_TYPES.HOME && s.playerColour === player.colour) nearbyDesc.push(`YOUR home ${s.id}`);
+      if (s.type === SPACE_TYPES.DOG_PARK) nearbyDesc.push(`dog park ${s.id}`);
+    }
+
+    destinations.push({
+      id: destId,
+      steps: info.steps,
+      driveCost: info.driveCost,
+      nearby: nearbyDesc,
+      actions: actionList,
+    });
+  }
+
+  // All players summary
+  const playerSummaries = game.players.map(p => {
+    const pc = getConfig(p.id);
+    const terr = board.getTerritoriesOwnedBy(p.id).length;
+    const isAlly = player.allies.includes(p.id);
+    return `${pc.name} (${ARCHETYPES[p.archetype].name}): ${terr} territories, pos=${p.position}${isAlly ? ' [ALLIED]' : ''}${p.id === player.id ? ' [YOU]' : ''}`;
+  });
+
+  const user = `ROUND ${game.turnNumber}/${game.config.maxTurns}
+
+YOU: ${cfg.name} (${arch.name})
+Position: ${player.position}
+Resources: water=${player.water}/${arch.water}, swagger=${player.swagger}/${arch.swagger}, drive=${player.drive}/${arch.drive}, grit=${player.grit}/${arch.grit}, bond=${player.bond}/${arch.bond}
+Your territories: ${board.getTerritoriesOwnedBy(player.id).map(t => t.id).join(', ') || 'none'}
+Allies: ${player.allies.length > 0 ? player.allies.map(a => getConfig(a)?.name || a).join(', ') : 'none'}
+Dice roll: ${maxSteps} steps available
+
+ALL PLAYERS:
+${playerSummaries.join('\n')}
+
+REACHABLE DESTINATIONS (${destinations.length} spaces within ${maxSteps} steps):
+${destinations.map(d => {
+  let line = `  ${d.id} (${d.steps} steps, drive cost: ${d.driveCost})`;
+  if (d.nearby.length > 0) line += `\n    nearby: ${d.nearby.join(', ')}`;
+  if (d.actions.length > 0) line += `\n    actions: ${d.actions.join('; ')}`;
+  return line;
+}).join('\n')}
+
+Choose where to move and what action to take. If no good action is available at your chosen destination, use "pass". Pick "moveTo" from the destination IDs listed above. Pick "action" and "actionTarget" from the actions listed for your chosen destination.`;
+
+  return [
+    { role: 'user', content: `${system}\n\n---\n\n${user}` },
+  ];
+}
+
+async function callClaudeAPI(messages) {
+  const apiKey = sessionStorage.getItem('anthropic_api_key');
+  if (!apiKey) throw new Error('No API key configured');
+
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 512,
+      messages,
+    }),
+  });
+
+  if (!resp.ok) {
+    const errText = await resp.text().catch(() => '');
+    throw new Error(`API ${resp.status}: ${errText.slice(0, 200)}`);
+  }
+  const data = await resp.json();
+  return data.content[0].text;
+}
+
+function getActionsAtPosition(player, spaceId) {
+  const savedPos = player.position;
+  player.position = spaceId;
+  const actions = getActionableSpaces(player);
+  player.position = savedPos;
+  return actions;
+}
+
+function parseClaudeResponse(text) {
+  // Strip markdown code fences if present
+  let cleaned = text.trim();
+  if (cleaned.startsWith('```')) {
+    cleaned = cleaned.replace(/^```(?:json)?\s*/, '').replace(/\s*```$/, '');
+  }
+  return JSON.parse(cleaned);
+}
+
+async function claudePlayerTurn(player, cfg, maxSteps) {
+  const reachable = bfsReachable(player, maxSteps);
+
+  // Build prompt with all destinations and their actions
+  const messages = buildPrompt(player, maxSteps, reachable);
+
+  // Call Claude API
+  const rawResponse = await callClaudeAPI(messages);
+  const response = parseClaudeResponse(rawResponse);
+
+  // Validate moveTo
+  const moveTo = response.moveTo;
+  if (!moveTo || !reachable.has(moveTo)) {
+    throw new Error(`Invalid moveTo: ${moveTo}`);
+  }
+
+  // Build path
+  const path = reconstructPath(reachable, moveTo);
+  if (path.length === 0 || path[0] !== player.position) {
+    throw new Error(`Path reconstruction failed for ${moveTo}`);
+  }
+
+  return { path, response };
+}
+
+async function executeClaudeAction(player, cfg, claudeResponse) {
+  const { action, actionTarget, reasoning } = claudeResponse;
+
+  // Log reasoning
+  if (reasoning) {
+    addLogEntry(`  ${cfg.name} thinks: "${reasoning}"`, 'reasoning');
+  }
+
+  if (!action || action === 'pass') {
+    addLogEntry(`${cfg.name} (Claude AI): passes.`, 'system');
+    return;
+  }
+
+  // Find matching action from current actionable spaces
+  const actionable = getActionableSpaces(player);
+  const allActions = actionable.flatMap(a => a.actions);
+
+  let matched = null;
+  if (actionTarget) {
+    matched = allActions.find(a => a.type === action && a.targetId === actionTarget);
+  }
+  if (!matched) {
+    matched = allActions.find(a => a.type === action);
+  }
+
+  if (matched) {
+    await executeAction(player, cfg, matched);
+  } else if (allActions.length > 0) {
+    // Claude chose an invalid action — fall back to first available
+    addLogEntry(`  ${cfg.name}: Claude chose unavailable action "${action}", using fallback.`, 'system');
+    await executeAction(player, cfg, allActions[0]);
+  } else {
+    addLogEntry(`${cfg.name} (Claude AI): no actions available.`, 'system');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  AI PLAYER — ALGORITHMIC FALLBACK (goal-directed, priority-driven)
 // ═══════════════════════════════════════════════════════════════════════
 
 const WALKABLE = ['sidewalk', 'intersection', 'sideStreet', 'path'];
