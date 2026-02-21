@@ -131,9 +131,13 @@ body {
 #board-svg .cell-interactive:hover { stroke: rgba(255,255,255,0.4); stroke-width: 1.5; }
 #board-svg .highlight { fill: rgba(0,128,255,0.25); stroke: #0080ff; stroke-width: 2; pointer-events: none; }
 #board-svg .highlight-action { fill: rgba(255,200,0,0.2); stroke: #ffc800; stroke-width: 2; pointer-events: none; }
-#board-svg .pawn { stroke: #000; stroke-width: 1.5; }
-#board-svg .fortify-dot { fill: #fff; stroke: #333; stroke-width: 0.5; }
-#board-svg .owner-border { fill: none; stroke-width: 2.5; pointer-events: none; }
+#board-svg .pawn { stroke: #000; stroke-width: 2; }
+#board-svg .pawn-label { fill: #000; font-size: 11px; font-weight: bold; pointer-events: none; }
+#board-svg .fortify-badge { pointer-events: none; }
+#board-svg .fortify-badge-bg { fill: #222; stroke: #fff; stroke-width: 1; }
+#board-svg .fortify-badge-text { fill: #fff; font-size: 11px; font-weight: bold; }
+#board-svg .owner-fill { pointer-events: none; opacity: 0.45; }
+#board-svg .owner-border { fill: none; stroke-width: 4; opacity: 1; pointer-events: none; }
 
 /* Controls bar */
 #controls-bar {
@@ -1151,32 +1155,46 @@ function updateOverlay() {
     const cells = spaceIdToCells[s.id];
     if (!cells || cells.length === 0) continue;
 
-    // Ownership border — draw on each cell
+    // Owned territory — fill cells with player color
     if (s.owner) {
       const cfg = playerConfigs.find(c => c.id === s.owner);
       if (cfg) {
         const colour = COLOUR_HEX[cfg.colour] || cfg.colour;
+        // Color fill on each cell
         for (const cell of cells) {
-          const ownerRect = svgCreate('rect', {
-            x: cell.col * CELL + 1, y: cell.row * CELL + 1,
-            width: CELL - 2, height: CELL - 2,
+          const fill = svgCreate('rect', {
+            x: cell.col * CELL, y: cell.row * CELL,
+            width: CELL, height: CELL,
+            fill: colour, class: 'owner-fill',
+          });
+          layerOverlay.appendChild(fill);
+        }
+        // Prominent border around each cell
+        for (const cell of cells) {
+          const border = svgCreate('rect', {
+            x: cell.col * CELL + 2, y: cell.row * CELL + 2,
+            width: CELL - 4, height: CELL - 4,
             stroke: colour, class: 'owner-border',
           });
-          layerOverlay.appendChild(ownerRect);
+          layerOverlay.appendChild(border);
         }
       }
     }
 
-    // Fortify tokens (small white dots on first cell)
+    // Fortify count as a number badge (top-right corner of first cell)
     if (s.fortifyTokens > 0) {
       const fc = cells[0];
-      const cx = fc.col * CELL + CELL / 2;
-      const cy = fc.row * CELL + CELL - 10;
-      for (let f = 0; f < s.fortifyTokens; f++) {
-        const fx = cx - 10 + f * 10;
-        const dot = svgCreate('circle', { cx: fx, cy, r: 3.5, class: 'fortify-dot' });
-        layerOverlay.appendChild(dot);
-      }
+      const bx = fc.col * CELL + CELL - 10;
+      const by = fc.row * CELL + 12;
+      const bg = svgCreate('circle', { cx: bx, cy: by, r: 8, class: 'fortify-badge fortify-badge-bg' });
+      layerOverlay.appendChild(bg);
+      const txt = svgCreate('text', {
+        x: bx, y: by,
+        'text-anchor': 'middle', 'dominant-baseline': 'central',
+        class: 'fortify-badge fortify-badge-text',
+      });
+      txt.textContent = s.fortifyTokens;
+      layerOverlay.appendChild(txt);
     }
 
     // Pending alliance marker at dog parks
@@ -1206,9 +1224,9 @@ function updatePawns() {
   }
   const offsets = {
     1: [[0, 0]],
-    2: [[-8, 0], [8, 0]],
-    3: [[-8, -6], [8, -6], [0, 8]],
-    4: [[-8, -6], [8, -6], [-8, 8], [8, 8]],
+    2: [[-10, 0], [10, 0]],
+    3: [[-10, -7], [10, -7], [0, 10]],
+    4: [[-10, -7], [10, -7], [-10, 10], [10, 10]],
   };
   for (const [posId, players] of Object.entries(byPos)) {
     const pos = positions[posId];
@@ -1218,12 +1236,23 @@ function updatePawns() {
       const cfg = playerConfigs.find(c => c.id === players[i].id);
       const ox = offs[i] ? offs[i][0] : 0;
       const oy = offs[i] ? offs[i][1] : 0;
+      const cx = pos.x + ox, cy = pos.y + oy;
+      const colour = cfg ? (COLOUR_HEX[cfg.colour] || cfg.colour) : '#fff';
       const pawn = svgCreate('circle', {
-        cx: pos.x + ox, cy: pos.y + oy, r: 7,
-        fill: cfg ? (COLOUR_HEX[cfg.colour] || cfg.colour) : '#fff',
+        cx, cy, r: 11,
+        fill: colour,
         class: 'pawn',
       });
       layerPawns.appendChild(pawn);
+      // Player initial letter inside the pawn
+      const initial = cfg ? cfg.name.charAt(0).toUpperCase() : '?';
+      const label = svgCreate('text', {
+        x: cx, y: cy,
+        'text-anchor': 'middle', 'dominant-baseline': 'central',
+        class: 'pawn-label',
+      });
+      label.textContent = initial;
+      layerPawns.appendChild(label);
     }
   }
 }
