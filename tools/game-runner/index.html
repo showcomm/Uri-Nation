@@ -518,8 +518,7 @@ class Game {
     return { ok: true, waterCost: 1, swaggerCost: 1 };
   }
   canDrink(pid) {
-    const p = this.getPlayer(pid), s = this.board.getSpace(p.position);
-    if (!s || s.type !== SPACE_TYPES.WATER_SOURCE) return { ok: false, reason: 'Not at water source' };
+    const p = this.getPlayer(pid);
     const nd = p.archetype !== 'scrapper';
     if (nd && p.drive < 1) return { ok: false, reason: 'Need 1 drive' };
     return { ok: true, driveCost: nd ? 1 : 0 };
@@ -658,7 +657,6 @@ class Game {
     const s = this.board.getSpace(spaceId); if (!s) return [];
     const effects = [];
     switch (s.type) {
-      case SPACE_TYPES.WATER_SOURCE: effects.push({ type: 'waterSource', optional: true }); break;
       case SPACE_TYPES.CHANCE_SPOT: effects.push({ type: 'chanceCard' }); break;
       case SPACE_TYPES.DOG_PARK:
         if (this.pendingAlliances.has(spaceId)) {
@@ -1411,7 +1409,7 @@ function getActionableSpaces(player) {
     if (s.type === SPACE_TYPES.DOG_PARK && game.canAlly(player.id, tid).ok) {
       actions.push({ type: 'ally', targetId: tid, label: `Ally at ${s.label}`, cost: 'W:1 Bd:1' });
     }
-    if (s.type === SPACE_TYPES.WATER_SOURCE && tid === currentId && game.canDrink(player.id).ok) {
+    if (s.type === SPACE_TYPES.WATER_SOURCE && game.canDrink(player.id).ok) {
       actions.push({ type: 'drink', targetId: tid, label: 'Drink', cost: 'Dr:1' });
     }
 
@@ -1715,9 +1713,9 @@ async function executeAction(player, cfg, action) {
       break;
     }
     case 'drink': {
-      const waterGain = 2; // Fixed until chance deck is implemented
+      const waterGain = 99; // tops up to archetype max
       game.drink(player.id, waterGain);
-      addLogEntry(`${cfg.name} drank: +${waterGain} water`, 'action');
+      addLogEntry(`${cfg.name} drank — water refilled`, 'action');
       break;
     }
   }
