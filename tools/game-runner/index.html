@@ -1553,10 +1553,8 @@ async function runGame() {
       updateSidebar();
 
       // Process pass-through effects
-      let passedHome = false;
       if (moveResult.success && moveResult.effects) {
         for (const eff of moveResult.effects) {
-          if (eff.type === 'homeResupply') { passedHome = true; continue; }
           if (eff.type === 'dogPark') {
             game.applyDogPark(player.id);
             addLogEntry(`${cfg.name} passed Dog Park: +1 Bond`, 'action');
@@ -1589,23 +1587,20 @@ async function runGame() {
         if (reached) {
           aiGoals[player.id] = null; // clear goal, pick new one next turn
         }
-        // Always take an action if one is available
-        if (!passedHome) {
-          const available = getActionableSpaces(player);
-          if (available.flatMap(a => a.actions).length > 0) {
-            if (reached) {
-              // At goal: let Claude decide
-              setPhase(`${cfg.name} — Thinking...`);
-              try {
-                await claudePickAction(player, cfg, available);
-              } catch (err) {
-                addLogEntry(`  ${cfg.name}: Claude action error, falling back. (${err.message})`, 'system');
-                await aiDoAction(player, cfg);
-              }
-            } else {
-              // En route: take opportunistic actions via algorithmic AI
+        const available = getActionableSpaces(player);
+        if (available.flatMap(a => a.actions).length > 0) {
+          if (reached) {
+            // At goal: let Claude decide
+            setPhase(`${cfg.name} — Thinking...`);
+            try {
+              await claudePickAction(player, cfg, available);
+            } catch (err) {
+              addLogEntry(`  ${cfg.name}: Claude action error, falling back. (${err.message})`, 'system');
               await aiDoAction(player, cfg);
             }
+          } else {
+            // En route: take opportunistic actions via algorithmic AI
+            await aiDoAction(player, cfg);
           }
         }
       } else if (cfg.isAI) {
@@ -1616,11 +1611,20 @@ async function runGame() {
       clearControls();
       updateOverlay(); updatePawns(); updateSidebar();
 
-      // Phase 4: Home Resupply
-      if (passedHome) {
-        game.applyHomeResupply(player.id);
-        addLogEntry(`${cfg.name} resupplied at home`, 'action');
-        updateSidebar();
+      // Phase 4: Home Resupply — check if player ended on a sidewalk
+      // adjacent to their own home (HOME spaces aren't walkable, so we
+      // must check neighbors of the final position, not the path itself)
+      {
+        const homeSpace = board.getHomeSpace(player.id, game.players);
+        if (homeSpace) {
+          const atHome = board.getNeighbors(player.position)
+            .some(n => n.space.id === homeSpace.id);
+          if (atHome) {
+            game.applyHomeResupply(player.id);
+            addLogEntry(`${cfg.name} resupplied at home`, 'action');
+            updateSidebar();
+          }
+        }
       }
 
       // Phase 5: Win check
