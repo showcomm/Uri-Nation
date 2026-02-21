@@ -1865,7 +1865,7 @@ async function doChallenge(player, cfg, targetId) {
 //  CLAUDE AI PLAYER
 // ═══════════════════════════════════════════════════════════════════════
 
-// ── BFS distances from a start space across the full board graph (all space types) ──
+// ── BFS distances from a start space (walkable spaces only) ──
 
 function bfsDistances(startId) {
   const dist = {};
@@ -1875,8 +1875,11 @@ function bfsDistances(startId) {
     const cur = queue.shift();
     const d = dist[cur];
     for (const n of board.getNeighbors(cur)) {
-      if (dist[n.space.id] === undefined) {
-        dist[n.space.id] = d + 1;
+      if (dist[n.space.id] !== undefined) continue;
+      // Record distance to ALL neighbors (so territories/homes get a distance)
+      dist[n.space.id] = d + 1;
+      // But only continue traversal through walkable spaces
+      if (WALKABLE.includes(n.space.type)) {
         queue.push(n.space.id);
       }
     }
