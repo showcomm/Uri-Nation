@@ -1865,106 +1865,156 @@ async function doChallenge(player, cfg, targetId) {
 //  CLAUDE AI PLAYER
 // ═══════════════════════════════════════════════════════════════════════
 
-const ARCHETYPE_PERSONALITY = {
-  bruiser:  'You are a Bruiser — aggressive and territory-hungry. You prioritize claiming and expanding your territory above all else. You use your high water reserves to dominate the board.',
-  scrapper: 'You are a Scrapper — combative and resourceful. You love challenging opponents for their territories. Your high drive lets you move aggressively across the board.',
-  diplomat: 'You are a Diplomat — alliance-focused and strategic. You prefer forming alliances over direct conflict. Challenges are a last resort. You build power through social connections.',
-  yapper:   'You are a Yapper — defensive and fortification-focused. You claim territory and then fortify it heavily. Your high grit makes you excellent at holding what you have.',
-};
+// ── BFS distances from a start space across the full board graph (all space types) ──
 
-function buildPrompt(player, maxSteps, reachable) {
-  const cfg = getConfig(player.id);
+function bfsDistances(startId) {
+  const dist = {};
+  dist[startId] = 0;
+  const queue = [startId];
+  while (queue.length > 0) {
+    const cur = queue.shift();
+    const d = dist[cur];
+    for (const n of board.getNeighbors(cur)) {
+      if (dist[n.space.id] === undefined) {
+        dist[n.space.id] = d + 1;
+        queue.push(n.space.id);
+      }
+    }
+  }
+  return dist;
+}
+
+// ── Reachable walkable spaces within a dice roll (thin wrapper for prompt) ──
+
+function getReachableSpaces(player, maxSteps) {
+  const reachable = bfsReachable(player, maxSteps);
+  const result = [];
+  for (const [id, info] of reachable) {
+    result.push({ id, steps: info.steps, driveCost: info.driveCost });
+  }
+  return result;
+}
+
+function buildPrompt(player, maxSteps) {
   const arch = ARCHETYPES[player.archetype];
 
-  const system = `You are an AI playing Uri-Nation, a dog territory board game. You must respond with ONLY valid JSON, no other text.
+  // Compute BFS distances from player position to everything relevant
+  const distances = bfsDistances(player.position);
 
-RULES SUMMARY:
-- Players are dogs competing for territory by urine marking. Win by holding ${game.config.territoryWinThreshold} territories, or most territories after ${game.config.maxTurns} rounds.
-- Actions cost resources. Claim territory: 2 water + 1 swagger. Challenge opponent territory: 2 water + 1 drive. Fortify own territory: 1 water + 1 grit. Ally at dog park: 1 water + 1 bond. Drink at water source: 1 drive. Break alliance: 1 water + 1 swagger.
-- Challenge: both roll 1d6, attacker must roll HIGHER. Defender gets +fortify tokens bonus. If defender has 3+ connected territories (cluster), ties go to defender.
-- Territory income: +1 swagger per ${game.config.swaggerPerTerritories} territories each round.
-- Home resupply: passing/landing on home refills all resources to starting values.
-- You can only walk on sidewalks, intersections, side streets, and paths. Territories, homes, water sources, and dog parks are accessed from adjacent walkable spaces.
-- Fortify max: ${game.config.maxFortify} token per territory.
-
-${ARCHETYPE_PERSONALITY[player.archetype]}
-
-RESPONSE FORMAT — respond with ONLY this JSON, no markdown, no explanation outside the JSON:
-{
-  "moveTo": "space_id",
-  "action": "claim|challenge|fortify|ally|drink|shortcut|breakAlliance|pass",
-  "actionTarget": "target_id_or_null",
-  "reasoning": "Brief 1-sentence explanation"
-}`;
-
-  // Build destinations with available actions
-  const destinations = [];
-  for (const [destId, info] of reachable) {
-    const destActions = getActionsAtPosition(player, destId);
-    const actionList = destActions.flatMap(a => a.actions).map(a =>
-      `${a.type} ${a.targetId} (${a.cost})`
-    );
-
-    // Describe what's adjacent
-    const neighbors = board.getNeighbors(destId);
-    const nearbyDesc = [];
-    for (const n of neighbors) {
-      const s = n.space;
-      if (s.type === SPACE_TYPES.TERRITORY) {
-        if (s.owner === null) nearbyDesc.push(`unclaimed territory ${s.id}`);
-        else if (s.owner === player.id) nearbyDesc.push(`your territory ${s.id} (fortify:${s.fortifyTokens})`);
-        else {
-          const ownerCfg = getConfig(s.owner);
-          nearbyDesc.push(`${ownerCfg ? ownerCfg.name : s.owner}'s territory ${s.id} (fortify:${s.fortifyTokens})`);
-        }
-      }
-      if (s.type === SPACE_TYPES.WATER_SOURCE) nearbyDesc.push(`water source ${s.id}`);
-      if (s.type === SPACE_TYPES.HOME && s.playerColour === player.colour) nearbyDesc.push(`YOUR home ${s.id}`);
-      if (s.type === SPACE_TYPES.DOG_PARK) nearbyDesc.push(`dog park ${s.id}`);
-    }
-
-    destinations.push({
-      id: destId,
-      steps: info.steps,
-      driveCost: info.driveCost,
-      nearby: nearbyDesc,
-      actions: actionList,
-    });
+  // All unclaimed territories with distance
+  const unclaimed = [];
+  const threatened = []; // opponent territories
+  const owned = [];
+  for (const s of board.getAllSpaces()) {
+    if (s.type !== SPACE_TYPES.TERRITORY) continue;
+    const dist = distances[s.id] ?? 999;
+    if (s.owner === null) unclaimed.push({ id: s.id, dist });
+    else if (s.owner === player.id) owned.push({ id: s.id, fortify: s.fortifyTokens, dist });
+    else threatened.push({ id: s.id, owner: s.owner, fortify: s.fortifyTokens, dist });
   }
+  unclaimed.sort((a,b) => a.dist - b.dist);
+  threatened.sort((a,b) => a.dist - b.dist);
 
-  // All players summary
-  const playerSummaries = game.players.map(p => {
-    const pc = getConfig(p.id);
-    const terr = board.getTerritoriesOwnedBy(p.id).length;
-    const isAlly = player.allies.includes(p.id);
-    return `${pc.name} (${ARCHETYPES[p.archetype].name}): ${terr} territories, pos=${p.position}${isAlly ? ' [ALLIED]' : ''}${p.id === player.id ? ' [YOU]' : ''}`;
-  });
+  // Water sources with distance
+  const waterSources = board.getSpacesByType(SPACE_TYPES.WATER_SOURCE)
+    .map(s => ({ id: s.id, dist: distances[s.id] ?? 999 }))
+    .sort((a,b) => a.dist - b.dist);
 
-  const user = `ROUND ${game.turnNumber}/${game.config.maxTurns}
+  // Home turf distance
+  const homeSpace = board.getHomeSpace(player.id, game.players);
+  const homeDist = homeSpace ? (distances[homeSpace.id] ?? 999) : 999;
 
-YOU: ${cfg.name} (${arch.name})
-Position: ${player.position}
-Resources: water=${player.water}/${arch.water}, swagger=${player.swagger}/${arch.swagger}, drive=${player.drive}/${arch.drive}, grit=${player.grit}/${arch.grit}, bond=${player.bond}/${arch.bond}
-Your territories: ${board.getTerritoriesOwnedBy(player.id).map(t => t.id).join(', ') || 'none'}
-Allies: ${player.allies.length > 0 ? player.allies.map(a => getConfig(a)?.name || a).join(', ') : 'none'}
-Dice roll: ${maxSteps} steps available
+  // Dog parks
+  const dogParks = board.getSpacesByType(SPACE_TYPES.DOG_PARK)
+    .map(s => ({ id: s.id, dist: distances[s.id] ?? 999, hasBond: game.pendingAlliances.has(s.id) }))
+    .sort((a,b) => a.dist - b.dist);
 
-ALL PLAYERS:
-${playerSummaries.join('\n')}
+  // Other players summary
+  const others = game.players
+    .filter(p => p.id !== player.id)
+    .map(p => {
+      const cfg = getConfig(p.id);
+      const tc = board.getTerritoriesOwnedBy(p.id).length;
+      return `- ${cfg.name} (${p.archetype}): ${tc} territories, W:${p.water} Sw:${p.swagger} Dr:${p.drive} Gr:${p.grit} Bd:${p.bond}, position: ${p.position}`;
+    }).join('\n');
 
-REACHABLE DESTINATIONS (${destinations.length} spaces within ${maxSteps} steps):
-${destinations.map(d => {
-  let line = `  ${d.id} (${d.steps} steps, drive cost: ${d.driveCost})`;
-  if (d.nearby.length > 0) line += `\n    nearby: ${d.nearby.join(', ')}`;
-  if (d.actions.length > 0) line += `\n    actions: ${d.actions.join('; ')}`;
-  return line;
-}).join('\n')}
+  // Territory income calculation
+  const myTerritories = board.getTerritoriesOwnedBy(player.id).length;
+  const swaggerIncome = game.calculateSwaggerIncome(player.id);
 
-Choose where to move and what action to take. If no good action is available at your chosen destination, use "pass". Pick "moveTo" from the destination IDs listed above. Pick "action" and "actionTarget" from the actions listed for your chosen destination.`;
+  // Resource sufficiency warnings
+  const warnings = [];
+  if (player.water < 2) warnings.push('CRITICAL: Cannot claim or challenge without more water. Must reach water source or home.');
+  if (player.swagger === 0 && player.grit === 0) warnings.push('CRITICAL: Cannot re-claim after winning a challenge. Must reach home to resupply swagger.');
+  if (player.water === 0) warnings.push('CRITICAL: No water at all. Cannot take any action this turn.');
 
-  return [
-    { role: 'user', content: `${system}\n\n---\n\n${user}` },
-  ];
+  // Reachable sidewalk spaces this turn (for move selection)
+  const reachable = getReachableSpaces(player, maxSteps);
+  const reachableDesc = reachable.map(r => {
+    const neighbors = board.getNeighbors(r.id)
+      .filter(n => [SPACE_TYPES.TERRITORY, SPACE_TYPES.HOME, SPACE_TYPES.DOG_PARK, SPACE_TYPES.WATER_SOURCE].includes(n.space.type))
+      .map(n => {
+        const s = n.space;
+        if (s.type === SPACE_TYPES.TERRITORY) {
+          const ownerCfg = s.owner ? getConfig(s.owner) : null;
+          return `${s.id}(territory,${s.owner ? 'owned by '+ownerCfg.name : 'EMPTY'}${s.fortifyTokens ? ',fortified' : ''})`;
+        }
+        if (s.type === SPACE_TYPES.WATER_SOURCE) return `${s.id}(WATER SOURCE)`;
+        if (s.type === SPACE_TYPES.HOME) return `${s.id}(HOME${s.playerColour === player.colour ? '-YOURS' : ''})`;
+        if (s.type === SPACE_TYPES.DOG_PARK) return `${s.id}(DOG PARK${game.pendingAlliances.has(s.id) ? ',active bond' : ''})`;
+      }).filter(Boolean).join(', ');
+    return `  ${r.id}: [${neighbors}]`;
+  }).join('\n');
+
+  return `You are playing Uri-Nation. Your goal is to WIN by holding the most territories.
+
+RESOURCE COSTS:
+- Claim empty territory: 2 water + 1 swagger
+- Challenge occupied territory: 2 water + 1 drive (then roll 1d6 each, attacker must roll higher)
+- Fortify your territory: 1 water + 1 grit (adds +1 to your defence roll, max 1 per territory)
+- Ally initiate at dog park: 1 water + 1 bond (protects your 2 home-adjacent territories from allied players)
+- Drink at water source: 1 drive (tops up water to your max of ${arch.water})
+- Home turf: stop there to refill ALL resources to max (water:${arch.water} swagger:${arch.swagger} drive:${arch.drive} grit:${arch.grit} bond:${arch.bond}) — costs remaining movement
+- Cluster rule: if defender owns 3+ connected territories, ties go to defender
+
+YOUR STATE:
+- Resources: Water:${player.water}/${arch.water} Swagger:${player.swagger} Drive:${player.drive} Grit:${player.grit} Bond:${player.bond}
+- Territories owned: ${myTerritories} (swagger income: +${swaggerIncome} per turn from connected groups)
+- Allies: ${player.allies.length > 0 ? player.allies.join(', ') : 'none'}
+- Current position: ${player.position}
+- This turn roll: ${maxSteps} steps available
+${warnings.length > 0 ? '\nWARNINGS:\n' + warnings.join('\n') : ''}
+
+BOARD DISTANCES FROM YOUR POSITION (in steps):
+Unclaimed territories: ${unclaimed.slice(0,8).map(t => `${t.id}(${t.dist} steps)`).join(', ') || 'none'}
+Your territories: ${owned.map(t => `${t.id}(${t.dist} steps${t.fortify ? ',fortified' : ''})`).join(', ') || 'none'}
+Opponent territories: ${threatened.slice(0,6).map(t => `${t.id}(${t.dist} steps,owner:${getConfig(t.owner)?.name}${t.fortify ? ',fortified' : ''})`).join(', ') || 'none'}
+Water sources: ${waterSources.map(w => `${w.id}(${w.dist} steps)`).join(', ') || 'none'}
+Home turf: ${homeDist} steps away
+Dog parks: ${dogParks.map(d => `${d.id}(${d.dist} steps${d.hasBond ? ',ACTIVE BOND' : ''})`).join(', ') || 'none'}
+
+OTHER PLAYERS:
+${others}
+
+REACHABLE THIS TURN (spaces you can move to within your ${maxSteps}-step roll, with their adjacent interactable spaces):
+${reachableDesc || '  none reachable'}
+
+PLANNING INSTRUCTIONS:
+- Think 2-3 turns ahead. If you cannot afford an action now, plan the route to fix that first.
+- If water < 2: your top priority is reaching a water source or home before anything else.
+- If swagger = 0 and grit = 0: you cannot re-claim after winning, so go home to resupply before challenging.
+- Prefer claiming unclaimed territories over challenging — lower cost, no risk.
+- Prefer territories that connect to ones you already own — 3 connected = cluster bonus + swagger income.
+- Only challenge if you can also afford to re-claim afterward (need swagger or grit remaining after the 2 water + 1 drive cost).
+
+Respond with JSON only, no other text:
+{
+  "moveTo": "sidewalk_id (must be in the REACHABLE THIS TURN list above)",
+  "action": "claim|challenge|fortify|ally|drink|none",
+  "actionTarget": "space_id or null",
+  "plan": "what you intend to do over the next 2-3 turns",
+  "reasoning": "why this move maximizes your territory count"
+}`;
 }
 
 async function callClaudeAPI(messages) {
@@ -2012,16 +2062,16 @@ function parseClaudeResponse(text) {
 }
 
 async function claudePlayerTurn(player, cfg, maxSteps) {
-  const reachable = bfsReachable(player, maxSteps);
-
-  // Build prompt with all destinations and their actions
-  const messages = buildPrompt(player, maxSteps, reachable);
+  // Build prompt (computes reachable internally)
+  const promptText = buildPrompt(player, maxSteps);
+  const messages = [{ role: 'user', content: promptText }];
 
   // Call Claude API
   const rawResponse = await callClaudeAPI(messages);
   const response = parseClaudeResponse(rawResponse);
 
-  // Validate moveTo
+  // Validate moveTo against BFS reachable
+  const reachable = bfsReachable(player, maxSteps);
   const moveTo = response.moveTo;
   if (!moveTo || !reachable.has(moveTo)) {
     throw new Error(`Invalid moveTo: ${moveTo}`);
@@ -2037,14 +2087,17 @@ async function claudePlayerTurn(player, cfg, maxSteps) {
 }
 
 async function executeClaudeAction(player, cfg, claudeResponse) {
-  const { action, actionTarget, reasoning } = claudeResponse;
+  const { action, actionTarget, reasoning, plan } = claudeResponse;
 
-  // Log reasoning
+  // Log reasoning and plan
   if (reasoning) {
     addLogEntry(`  ${cfg.name} thinks: "${reasoning}"`, 'reasoning');
   }
+  if (plan) {
+    addLogEntry(`  ${cfg.name} plans: "${plan}"`, 'reasoning');
+  }
 
-  if (!action || action === 'pass') {
+  if (!action || action === 'pass' || action === 'none') {
     addLogEntry(`${cfg.name} (Claude AI): passes.`, 'system');
     return;
   }
