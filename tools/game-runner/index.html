@@ -1939,6 +1939,17 @@ function buildPrompt(player, maxSteps) {
       return `  ${cfg.name} (${p.archetype}): ${tc} territories, W:${p.water} Sw:${p.swagger} Dr:${p.drive} Gr:${p.grit} Bd:${p.bond}, at ${p.position}`;
     }).join('\n');
 
+  // Home turf: find the walkable sidewalk adjacent to this player's home + BFS distance
+  const homeSpace = board.getHomeSpace(player.id, game.players);
+  const homeSidewalks = homeSpace
+    ? board.getNeighbors(homeSpace.id)
+        .filter(n => WALKABLE.includes(n.space.type))
+        .map(n => n.space.id)
+    : [];
+  const homeSidewalk = homeSidewalks[0] || null;
+  const distances = bfsDistances(player.position);
+  const homeSidewalkDist = homeSidewalk ? (distances[homeSidewalk] ?? 999) : 999;
+
   const reachableList = reachable.map(r => {
     const adj = board.getNeighbors(r.id)
       .filter(n => [SPACE_TYPES.TERRITORY, SPACE_TYPES.HOME,
@@ -2026,6 +2037,8 @@ ${otherPlayers}
 Resources: Water:${player.water}/${arch.water} Swagger:${player.swagger} Drive:${player.drive} Grit:${player.grit} Bond:${player.bond}
 Territories (${myTerritories.length}): ${myTerritories.map(t => t.id).join(', ') || 'none'}
 Position: ${player.position}
+Your home turf: ${homeSpace?.id ?? 'unknown'}, accessible from ${homeSidewalk || 'unknown'} (stop here to resupply everything)
+Distance to your home turf sidewalk: ${homeSidewalkDist} steps
 Roll: ${maxSteps} steps this turn
 Allies: ${player.allies?.length > 0 ? player.allies.map(id => getConfig(id).name).join(', ') : 'none'}
 
