@@ -1897,123 +1897,150 @@ function getReachableSpaces(player, maxSteps) {
 
 function buildPrompt(player, maxSteps) {
   const arch = ARCHETYPES[player.archetype];
+  const myTerritories = board.getTerritoriesOwnedBy(player.id);
+  const allSpaces = board.getAllSpaces();
+  const myName = getConfig(player.id).name;
 
-  // Compute BFS distances from player position to everything relevant
-  const distances = bfsDistances(player.position);
+  // Only include territories that are claimed or reachable this turn
+  const reachable = getReachableSpaces(player, maxSteps);
+  const reachableIds = new Set(reachable.map(r => r.id));
+  const reachableNeighborIds = new Set(
+    reachable.flatMap(r => board.getNeighbors(r.id).map(n => n.space.id))
+  );
 
-  // All unclaimed territories with distance
-  const unclaimed = [];
-  const threatened = []; // opponent territories
-  const owned = [];
-  for (const s of board.getAllSpaces()) {
-    if (s.type !== SPACE_TYPES.TERRITORY) continue;
-    const dist = distances[s.id] ?? 999;
-    if (s.owner === null) unclaimed.push({ id: s.id, dist });
-    else if (s.owner === player.id) owned.push({ id: s.id, fortify: s.fortifyTokens, dist });
-    else threatened.push({ id: s.id, owner: s.owner, fortify: s.fortifyTokens, dist });
-  }
-  unclaimed.sort((a,b) => a.dist - b.dist);
-  threatened.sort((a,b) => a.dist - b.dist);
+  const relevantTerritories = allSpaces
+    .filter(s => s.type === SPACE_TYPES.TERRITORY &&
+      (s.owner !== null || reachableNeighborIds.has(s.id)))
+    .map(s => {
+      const ownerCfg = s.owner ? getConfig(s.owner) : null;
+      return `  ${s.id}: ${s.owner ? ownerCfg.name : 'empty'}${s.fortifyTokens ? ' (fortified)' : ''}`;
+    }).join('\n');
 
-  // Water sources with distance
-  const waterSources = board.getSpacesByType(SPACE_TYPES.WATER_SOURCE)
-    .map(s => ({ id: s.id, dist: distances[s.id] ?? 999 }))
-    .sort((a,b) => a.dist - b.dist);
+  const waterSources = allSpaces
+    .filter(s => s.type === SPACE_TYPES.WATER_SOURCE)
+    .map(s => s.id).join(', ');
 
-  // Home turf distance
-  const homeSpace = board.getHomeSpace(player.id, game.players);
-  const homeDist = homeSpace ? (distances[homeSpace.id] ?? 999) : 999;
+  const dogParks = allSpaces
+    .filter(s => s.type === SPACE_TYPES.DOG_PARK)
+    .map(s => `${s.id}${game.pendingAlliances.has(s.id) ? ' (active bond)' : ''}`).join(', ');
 
-  // Dog parks
-  const dogParks = board.getSpacesByType(SPACE_TYPES.DOG_PARK)
-    .map(s => ({ id: s.id, dist: distances[s.id] ?? 999, hasBond: game.pendingAlliances.has(s.id) }))
-    .sort((a,b) => a.dist - b.dist);
+  const homeTurfs = game.players
+    .map(p => {
+      const cfg = getConfig(p.id);
+      const hs = board.getHomeSpace(p.id, game.players);
+      return `${cfg.name}: ${hs?.id ?? 'unknown'}`;
+    }).join(', ');
 
-  // Other players summary
-  const others = game.players
+  const otherPlayers = game.players
     .filter(p => p.id !== player.id)
     .map(p => {
       const cfg = getConfig(p.id);
       const tc = board.getTerritoriesOwnedBy(p.id).length;
-      return `- ${cfg.name} (${p.archetype}): ${tc} territories, W:${p.water} Sw:${p.swagger} Dr:${p.drive} Gr:${p.grit} Bd:${p.bond}, position: ${p.position}`;
+      return `  ${cfg.name} (${p.archetype}): ${tc} territories, W:${p.water} Sw:${p.swagger} Dr:${p.drive} Gr:${p.grit} Bd:${p.bond}, at ${p.position}`;
     }).join('\n');
 
-  // Territory income calculation
-  const myTerritories = board.getTerritoriesOwnedBy(player.id).length;
-  const swaggerIncome = game.calculateSwaggerIncome(player.id);
-
-  // Resource sufficiency warnings
-  const warnings = [];
-  if (player.water < 2) warnings.push('CRITICAL: Cannot claim or challenge without more water. Must reach water source or home.');
-  if (player.swagger === 0 && player.grit === 0) warnings.push('CRITICAL: Cannot re-claim after winning a challenge. Must reach home to resupply swagger.');
-  if (player.water === 0) warnings.push('CRITICAL: No water at all. Cannot take any action this turn.');
-
-  // Reachable sidewalk spaces this turn (for move selection)
-  const reachable = getReachableSpaces(player, maxSteps);
-  const reachableDesc = reachable.map(r => {
-    const neighbors = board.getNeighbors(r.id)
-      .filter(n => [SPACE_TYPES.TERRITORY, SPACE_TYPES.HOME, SPACE_TYPES.DOG_PARK, SPACE_TYPES.WATER_SOURCE].includes(n.space.type))
+  const reachableList = reachable.map(r => {
+    const adj = board.getNeighbors(r.id)
+      .filter(n => [SPACE_TYPES.TERRITORY, SPACE_TYPES.HOME,
+        SPACE_TYPES.DOG_PARK, SPACE_TYPES.WATER_SOURCE].includes(n.space.type))
       .map(n => {
         const s = n.space;
         if (s.type === SPACE_TYPES.TERRITORY) {
           const ownerCfg = s.owner ? getConfig(s.owner) : null;
-          return `${s.id}(territory,${s.owner ? 'owned by '+ownerCfg.name : 'EMPTY'}${s.fortifyTokens ? ',fortified' : ''})`;
+          return `${s.id}(${s.owner ? ownerCfg.name : 'EMPTY'}${s.fortifyTokens ? ',fortified' : ''})`;
         }
         if (s.type === SPACE_TYPES.WATER_SOURCE) return `${s.id}(WATER SOURCE)`;
-        if (s.type === SPACE_TYPES.HOME) return `${s.id}(HOME${s.playerColour === player.colour ? '-YOURS' : ''})`;
-        if (s.type === SPACE_TYPES.DOG_PARK) return `${s.id}(DOG PARK${game.pendingAlliances.has(s.id) ? ',active bond' : ''})`;
+        if (s.type === SPACE_TYPES.HOME) {
+          const isYours = game.players.find(
+            p2 => board.getHomeSpace(p2.id, game.players)?.id === s.id
+          )?.id === player.id;
+          return `${s.id}(${isYours ? 'YOUR HOME \u2014 full resupply' : 'opponent home'})`;
+        }
+        if (s.type === SPACE_TYPES.DOG_PARK)
+          return `${s.id}(dog park${game.pendingAlliances.has(s.id) ? ',active bond' : ''})`;
       }).filter(Boolean).join(', ');
-    return `  ${r.id}: [${neighbors}]`;
+    return `  ${r.id}${adj ? ': ' + adj : ''}`;
   }).join('\n');
 
-  return `You are playing Uri-Nation. Your goal is to WIN by holding the most territories.
+  return `# Uri-Nation Rules
 
-RESOURCE COSTS:
-- Claim empty territory: 2 water + 1 swagger
-- Challenge occupied territory: 2 water + 1 drive (then roll 1d6 each, attacker must roll higher)
-- Fortify your territory: 1 water + 1 grit (adds +1 to your defence roll, max 1 per territory)
-- Ally initiate at dog park: 1 water + 1 bond (protects your 2 home-adjacent territories from allied players)
-- Drink at water source: 1 drive (tops up water to your max of ${arch.water})
-- Home turf: stop there to refill ALL resources to max (water:${arch.water} swagger:${arch.swagger} drive:${arch.drive} grit:${arch.grit} bond:${arch.bond}) — costs remaining movement
-- Cluster rule: if defender owns 3+ connected territories, ties go to defender
+You are playing Uri-Nation. Your goal is to WIN by holding the most territory.
 
-YOUR STATE:
-- Resources: Water:${player.water}/${arch.water} Swagger:${player.swagger} Drive:${player.drive} Grit:${player.grit} Bond:${player.bond}
-- Territories owned: ${myTerritories} (swagger income: +${swaggerIncome} per turn from connected groups)
-- Allies: ${player.allies.length > 0 ? player.allies.join(', ') : 'none'}
-- Current position: ${player.position}
-- This turn roll: ${maxSteps} steps available
-${warnings.length > 0 ? '\nWARNINGS:\n' + warnings.join('\n') : ''}
+## Win Conditions
+1. Hold 15 non-home territories at end of any turn.
+2. Last player with non-home territory.
+3. After 30 rounds: most territory wins. Ties: fortify tokens, then swagger.
 
-BOARD DISTANCES FROM YOUR POSITION (in steps):
-Unclaimed territories: ${unclaimed.slice(0,8).map(t => `${t.id}(${t.dist} steps)`).join(', ') || 'none'}
-Your territories: ${owned.map(t => `${t.id}(${t.dist} steps${t.fortify ? ',fortified' : ''})`).join(', ') || 'none'}
-Opponent territories: ${threatened.slice(0,6).map(t => `${t.id}(${t.dist} steps,owner:${getConfig(t.owner)?.name}${t.fortify ? ',fortified' : ''})`).join(', ') || 'none'}
-Water sources: ${waterSources.map(w => `${w.id}(${w.dist} steps)`).join(', ') || 'none'}
-Home turf: ${homeDist} steps away
-Dog parks: ${dogParks.map(d => `${d.id}(${d.dist} steps${d.hasBond ? ',ACTIVE BOND' : ''})`).join(', ') || 'none'}
+## The Board
+You walk on sidewalk and intersection spaces only. Territories, home turfs, dog parks, and water sources are ADJACENT to sidewalks \u2014 you never step on them, you interact from the sidewalk beside them.
 
-OTHER PLAYERS:
-${others}
+## Movement
+Your roll is already done (see below). Move along connected sidewalk/intersection spaces up to your roll. You can stop early or backtrack.
 
-REACHABLE THIS TURN (spaces you can move to within your ${maxSteps}-step roll, with their adjacent interactable spaces):
-${reachableDesc || '  none reachable'}
+## Resources in your dog bowl
+- Water pegs (rim) \u2014 fuel for all pee-based actions
+- Swagger, Drive, Grit, Bond tokens (centre)
 
-PLANNING INSTRUCTIONS:
-- Think 2-3 turns ahead. If you cannot afford an action now, plan the route to fix that first.
-- If water < 2: your top priority is reaching a water source or home before anything else.
-- If swagger = 0 and grit = 0: you cannot re-claim after winning, so go home to resupply before challenging.
-- Prefer claiming unclaimed territories over challenging — lower cost, no risk.
-- Prefer territories that connect to ones you already own — 3 connected = cluster bonus + swagger income.
-- Only challenge if you can also afford to re-claim afterward (need swagger or grit remaining after the 2 water + 1 drive cost).
+## Actions (at stopping position, targeting adjacent space)
+| Action | Cost | Effect |
+|--------|------|--------|
+| Claim | 2 water + 1 swagger | Mark an EMPTY adjacent territory |
+| Challenge | 2 water + 1 drive | Contest opponent's adjacent territory. Both roll 1d6 \u2014 attacker must roll higher. Defender +1 if fortified. If defender has 3+ connected territories, ties go to defender. Win: spend 1 swagger OR 1 grit to convert to your claim (if neither available, territory sits empty). Lose: +1 grit to you. |
+| Fortify | 1 water + 1 grit | Add defence to YOUR adjacent territory (max 1 token) |
+| Ally | 1 water + 1 bond | Initiate alliance at adjacent dog park. Protects both players' 2 home-adjacent territories from each other. Clears any claims either holds in other's home neighbourhood. |
+| Drink | 1 drive | At adjacent water source \u2014 tops up water to your max ONLY. Does not restore swagger/drive/grit/bond. Can happen during movement without ending your turn. |
+| None | \u2014 | No action this turn |
 
-Respond with JSON only, no other text:
+## Home Turf \u2014 IMPORTANT
+Stopping at your home turf's adjacent sidewalk triggers FULL RESUPPLY: water AND swagger AND drive AND grit AND bond all refilled to your archetype max. This is the ONLY way to restore swagger, drive, and bond. Costs remaining movement.
+
+## Archetype Maximums
+| | Water | Swagger | Drive | Grit | Bond |
+|-|-------|---------|-------|------|------|
+| Bruiser | 6 | 3 | 2 | 2 | 1 |
+| Scrapper | 3 | 2 | 3 | 1 | 2 |
+| Diplomat | 4 | 2 | 1 | 2 | 3 |
+| Yapper | 4 | 1 | 2 | 3 | 2 |
+
+## Territory Income
+Start of each turn: +1 swagger per 3 connected territories you own.
+
+---
+
+# Game State \u2014 Round ${game.turnNumber} of 30
+
+**Claimed and reachable territories:**
+${relevantTerritories || '  none near you'}
+
+**Water sources (board-wide):** ${waterSources}
+**Dog parks:** ${dogParks}
+**Home turfs:** ${homeTurfs}
+
+**Other players:**
+${otherPlayers}
+
+---
+
+# Your Turn \u2014 ${myName} (${player.archetype})
+
+Resources: Water:${player.water}/${arch.water} Swagger:${player.swagger} Drive:${player.drive} Grit:${player.grit} Bond:${player.bond}
+Territories (${myTerritories.length}): ${myTerritories.map(t => t.id).join(', ') || 'none'}
+Position: ${player.position}
+Roll: ${maxSteps} steps this turn
+Allies: ${player.allies?.length > 0 ? player.allies.map(id => getConfig(id).name).join(', ') : 'none'}
+
+**Spaces reachable this turn:**
+${reachableList || '  none'}
+
+Decide your best move to win the game. Consider what you can afford now and what you need to set up for future turns. If swagger is 0, you cannot claim \u2014 your priority should be reaching your home turf to resupply.
+
+Respond with JSON only:
 {
-  "moveTo": "sidewalk_id (must be in the REACHABLE THIS TURN list above)",
+  "moveTo": "id from reachable list above",
   "action": "claim|challenge|fortify|ally|drink|none",
-  "actionTarget": "space_id or null",
-  "plan": "what you intend to do over the next 2-3 turns",
-  "reasoning": "why this move maximizes your territory count"
+  "actionTarget": "space id or null",
+  "plan": "next 2-3 turn strategy",
+  "reasoning": "why this maximises your territory"
 }`;
 }
 
