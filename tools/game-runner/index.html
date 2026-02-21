@@ -2352,6 +2352,38 @@ function bfsTowardTarget(player, maxSteps, targetIds) {
     const path = reconstructPath(reachable, bestDest);
     if (path.length > 0 && path[0] === player.position) return path;
   }
+
+  // Fallback: no valid destination found toward target. Pick the farthest
+  // reachable space (any, not just valid-stop) in the direction of the target
+  // so the player never stands still.
+  let fallbackDest = null;
+  let fallbackDist = Infinity;
+  for (const [destId] of reachable) {
+    if (destId === player.position) continue;
+    // Quick BFS distance from destId to any target
+    const visited2 = new Set([destId]);
+    const queue2 = [[destId, 0]];
+    while (queue2.length > 0) {
+      const [cur2, d2] = queue2.shift();
+      if (d2 >= fallbackDist) break;
+      if (targetIds.includes(cur2)) {
+        fallbackDist = d2;
+        fallbackDest = destId;
+        break;
+      }
+      for (const nb2 of board.getNeighbors(cur2)) {
+        if (!visited2.has(nb2.space.id)) {
+          visited2.add(nb2.space.id);
+          queue2.push([nb2.space.id, d2 + 1]);
+        }
+      }
+    }
+  }
+  if (fallbackDest) {
+    const path = reconstructPath(reachable, fallbackDest);
+    if (path.length > 0 && path[0] === player.position) return path;
+  }
+
   return [player.position];
 }
 
@@ -2454,6 +2486,19 @@ function aiComputePath(player, maxSteps) {
     }
   }
 
+  // Last resort: if best is still current position, pick any reachable space
+  // that isn't the current position so the player always moves their full roll
+  if (bestDest === player.position) {
+    for (const [destId] of valid) {
+      if (destId !== player.position) { bestDest = destId; break; }
+    }
+  }
+  if (bestDest === player.position) {
+    // Even valid is empty/only current — grab any reachable space
+    for (const [destId] of reachable) {
+      if (destId !== player.position) { bestDest = destId; break; }
+    }
+  }
   if (bestDest === player.position) return [player.position];
 
   const path = reconstructPath(reachable, bestDest);
