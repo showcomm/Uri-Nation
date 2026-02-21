@@ -360,6 +360,12 @@ class Board {
   getHomeSpace(playerId, players) {
     const player = players.find(p => p.id === playerId);
     if (!player) return null;
+    // Primary: use stored homeSpaceId (always reliable)
+    if (player.homeSpaceId) {
+      const s = this.getSpace(player.homeSpaceId);
+      if (s) return s;
+    }
+    // Fallback: match by colour
     for (const s of this.spaces.values()) {
       if (s.type === SPACE_TYPES.HOME && s.playerColour === player.colour) return s;
     }
@@ -432,7 +438,7 @@ function createPlayer(id, archetypeKey, homeSpaceId, colour) {
   const arch = ARCHETYPES[archetypeKey];
   if (!arch) throw new Error(`Unknown archetype: ${archetypeKey}`);
   return {
-    id, colour, archetype: archetypeKey, position: homeSpaceId,
+    id, colour, archetype: archetypeKey, position: homeSpaceId, homeSpaceId,
     water: arch.water, swagger: arch.swagger, drive: arch.drive, grit: arch.grit, bond: arch.bond,
     allies: [],
   };
@@ -1930,15 +1936,17 @@ async function claudePickGoal(player) {
   const candidates = [];
 
   // Home turf
-  const homeAdjacentSidewalks = board.getNeighbors(
-    board.getHomeSpace(player.id, game.players).id
-  ).filter(n => WALKABLE.includes(n.space.type));
-  if (homeAdjacentSidewalks.length > 0) {
-    candidates.push({
-      label: `go home (full resupply: W:${arch.water} Sw:${arch.swagger} Dr:${arch.drive} Gr:${arch.grit} Bd:${arch.bond})`,
-      type: 'home',
-      spaceId: homeAdjacentSidewalks[0].space.id
-    });
+  const homeSpaceForGoal = board.getHomeSpace(player.id, game.players);
+  if (homeSpaceForGoal) {
+    const homeAdjacentSidewalks = board.getNeighbors(homeSpaceForGoal.id)
+      .filter(n => WALKABLE.includes(n.space.type));
+    if (homeAdjacentSidewalks.length > 0) {
+      candidates.push({
+        label: `go home (full resupply: W:${arch.water} Sw:${arch.swagger} Dr:${arch.drive} Gr:${arch.grit} Bd:${arch.bond})`,
+        type: 'home',
+        spaceId: homeAdjacentSidewalks[0].space.id
+      });
+    }
   }
 
   // Water sources
