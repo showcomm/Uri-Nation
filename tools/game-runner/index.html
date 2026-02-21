@@ -290,10 +290,10 @@ body {
 // --- archetypes.js ---
 
 const ARCHETYPES = {
-  bruiser:  { name: 'Bruiser',  water: 6, swagger: 3, drive: 2, grit: 2, bond: 1, discount: 'claimNoSwagger' },
-  scrapper: { name: 'Scrapper', water: 3, swagger: 2, drive: 3, grit: 1, bond: 2, discount: 'drinkNoDrive' },
-  diplomat: { name: 'Diplomat', water: 4, swagger: 2, drive: 1, grit: 2, bond: 3, discount: 'allyNoBond' },
-  yapper:   { name: 'Yapper',  water: 4, swagger: 1, drive: 2, grit: 3, bond: 2, discount: 'fortifyNoGrit' },
+  bruiser:  { name: 'Bruiser',  water: 6, swagger: 3, drive: 2, grit: 2, bond: 1 },
+  scrapper: { name: 'Scrapper', water: 3, swagger: 2, drive: 3, grit: 1, bond: 2 },
+  diplomat: { name: 'Diplomat', water: 4, swagger: 2, drive: 1, grit: 2, bond: 3 },
+  yapper:   { name: 'Yapper',  water: 4, swagger: 1, drive: 2, grit: 3, bond: 2 },
 };
 
 // --- board.js ---
@@ -414,14 +414,10 @@ class Board {
 // --- game.js ---
 
 const DEFAULTS = {
-  swaggerPerTerritories: 2,
-  gritPenaltyThreshold:  5,
-  maxFortify:            3,
+  swaggerPerTerritories: 3,
+  maxFortify:            1,
   maxTurns:              30,
-  territoryWinThreshold: 10,
-  desperationThreshold:  3,
-  desperationGritBonus:  2,
-  houseboundTurns:       2,
+  territoryWinThreshold: 15,
 };
 
 function createPlayer(id, archetypeKey, homeSpaceId, colour) {
@@ -430,7 +426,7 @@ function createPlayer(id, archetypeKey, homeSpaceId, colour) {
   return {
     id, colour, archetype: archetypeKey, position: homeSpaceId,
     water: arch.water, swagger: arch.swagger, drive: arch.drive, grit: arch.grit, bond: arch.bond,
-    allies: [], zeroTerritoryTurns: 0, housebound: false,
+    allies: [],
   };
 }
 
@@ -445,11 +441,6 @@ class Game {
   getPlayer(id)        { return this.players.find(p => p.id === id); }
   getCurrentPlayer()   { return this.players[this.currentPlayerIndex]; }
   getArchetype(player) { return ARCHETYPES[player.archetype]; }
-  sortTurnOrder() {
-    this.players.sort((a, b) =>
-      this.board.getTerritoriesOwnedBy(a.id).length - this.board.getTerritoriesOwnedBy(b.id).length
-    );
-  }
   calculateSwaggerIncome(pid) {
     let total = 0;
     for (const g of this.board.getConnectedTerritoryGroups(pid)) total += Math.floor(g.length / this.config.swaggerPerTerritories);
@@ -459,11 +450,6 @@ class Game {
     const p = this.getPlayer(pid);
     const sw = this.calculateSwaggerIncome(pid);
     if (sw > 0) { p.swagger += sw; this._log(pid, `territory income: +${sw} swagger`); }
-    const tc = this.board.getTerritoriesOwnedBy(pid).length;
-    if (tc < this.config.desperationThreshold) {
-      p.grit += this.config.desperationGritBonus;
-      this._log(pid, `desperation: +${this.config.desperationGritBonus} grit`);
-    }
   }
 
   // ── Validation ──
@@ -472,9 +458,8 @@ class Game {
     if (!s || s.type !== SPACE_TYPES.TERRITORY) return { ok: false, reason: 'Not a territory' };
     if (s.owner !== null) return { ok: false, reason: 'Occupied' };
     if (p.water < 2) return { ok: false, reason: 'Need 2 water' };
-    const ns = p.archetype !== 'bruiser';
-    if (ns && p.swagger < 1) return { ok: false, reason: 'Need 1 swagger' };
-    return { ok: true, waterCost: 2, swaggerCost: ns ? 1 : 0 };
+    if (p.swagger < 1) return { ok: false, reason: 'Need 1 swagger' };
+    return { ok: true, waterCost: 2, swaggerCost: 1 };
   }
   canChallenge(pid, tid) {
     const p = this.getPlayer(pid), s = this.board.getSpace(tid);
@@ -502,17 +487,15 @@ class Game {
     if (s.owner !== pid) return { ok: false, reason: 'Not yours' };
     if (s.fortifyTokens >= this.config.maxFortify) return { ok: false, reason: 'Max fortify' };
     if (p.water < 1) return { ok: false, reason: 'Need 1 water' };
-    const ng = p.archetype !== 'yapper';
-    if (ng && p.grit < 1) return { ok: false, reason: 'Need 1 grit' };
-    return { ok: true, waterCost: 1, gritCost: ng ? 1 : 0 };
+    if (p.grit < 1) return { ok: false, reason: 'Need 1 grit' };
+    return { ok: true, waterCost: 1, gritCost: 1 };
   }
   canAlly(pid, dogParkSpaceId) {
     const p = this.getPlayer(pid), s = this.board.getSpace(dogParkSpaceId);
     if (!s || s.type !== SPACE_TYPES.DOG_PARK) return { ok: false, reason: 'Not a dog park' };
     if (p.water < 1) return { ok: false, reason: 'Need 1 water' };
-    const nb = p.archetype !== 'diplomat';
-    if (nb && p.bond < 1) return { ok: false, reason: 'Need 1 bond' };
-    return { ok: true, waterCost: 1, bondCost: nb ? 1 : 0 };
+    if (p.bond < 1) return { ok: false, reason: 'Need 1 bond' };
+    return { ok: true, waterCost: 1, bondCost: 1 };
   }
   canBreakAlliance(pid, alliedPlayerId) {
     const p = this.getPlayer(pid);
@@ -523,9 +506,8 @@ class Game {
   }
   canDrink(pid) {
     const p = this.getPlayer(pid);
-    const nd = p.archetype !== 'scrapper';
-    if (nd && p.drive < 1) return { ok: false, reason: 'Need 1 drive' };
-    return { ok: true, driveCost: nd ? 1 : 0 };
+    if (p.drive < 1) return { ok: false, reason: 'Need 1 drive' };
+    return { ok: true, driveCost: 1 };
   }
   canReClaim(pid) {
     const p = this.getPlayer(pid);
@@ -552,23 +534,18 @@ class Game {
     const att = this.getPlayer(attackerId), def = this.getPlayer(defenderId), space = this.board.getSpace(tid);
     let aT = attackRoll, dT = defendRoll;
     dT += space.fortifyTokens;
-    if (att.archetype === 'diplomat') aT -= 1;
-    if (att.grit > this.config.gritPenaltyThreshold) aT -= (att.grit - this.config.gritPenaltyThreshold);
-    const yapperGrit = def.archetype === 'yapper';
-    if (yapperGrit) { att.grit += 1; this._log(attackerId, '+1 grit (challenged yapper)'); }
     const cluster = this.board.isInCluster(tid, defenderId);
     let outcome;
     if (aT > dT) outcome = 'attackerWins';
     else if (aT === dT) outcome = cluster ? 'defenderWins' : 'tie';
     else outcome = 'defenderWins';
-    const result = { outcome, attackRoll, defendRoll, attackTotal: aT, defendTotal: dT, fortifyBonus: space.fortifyTokens, clusterRule: cluster, yapperGrit };
+    const result = { outcome, attackRoll, defendRoll, attackTotal: aT, defendTotal: dT, fortifyBonus: space.fortifyTokens, clusterRule: cluster };
     if (outcome === 'attackerWins') {
       space.owner = null; space.fortifyTokens = 0;
       result.canReClaim = this.canReClaim(attackerId);
       this._log(attackerId, `won challenge at ${tid} (${aT} vs ${dT})`);
     } else if (outcome === 'defenderWins') {
-      att.grit += 1;
-      this._log(attackerId, `lost challenge at ${tid} (+1 grit)`);
+      this._log(attackerId, `lost challenge at ${tid}`);
     }
     return result;
   }
@@ -744,18 +721,9 @@ class Game {
     return { gameOver: false };
   }
 
-  // ── Maintenance ──
-  checkHousebound(pid) {
-    const p = this.getPlayer(pid);
-    if (this.board.getTerritoriesOwnedBy(pid).length === 0) {
-      p.zeroTerritoryTurns += 1;
-      if (p.zeroTerritoryTurns >= this.config.houseboundTurns) { p.housebound = true; this._log(pid, 'is housebound'); }
-    } else { p.zeroTerritoryTurns = 0; p.housebound = false; }
-  }
-
   // ── Turn management ──
   startRound() {
-    this.turnNumber += 1; this.sortTurnOrder(); this.currentPlayerIndex = 0;
+    this.turnNumber += 1; this.currentPlayerIndex = 0;
     this._log(null, `=== Round ${this.turnNumber} ===`);
   }
   advancePlayer() { this.currentPlayerIndex += 1; return this.currentPlayerIndex < this.players.length; }
@@ -763,10 +731,7 @@ class Game {
   static rollD6(rng) { if (rng) return rng(1, 6); return Math.floor(Math.random() * 6) + 1; }
   static roll2D6(rng) { return Game.rollD6(rng) + Game.rollD6(rng); }
   rollMovement(pid, rng) {
-    const p = this.getPlayer(pid);
-    let roll = Game.roll2D6(rng);
-    if (p.housebound) roll = Math.floor(roll / 2);
-    return roll;
+    return Game.roll2D6(rng);
   }
   getState() {
     return {
@@ -1027,6 +992,16 @@ function onStartGame() {
   // Create players (v1.3.0: pass colour)
   const players = playerConfigs.map(c => createPlayer(c.id, c.archetype, c.homeSpaceId, c.colour));
   game = new Game(board, players);
+
+  // Starting claim: each player gets one free adjacent territory
+  for (const p of players) {
+    const homeNeighbors = board.getHomeNeighbourhood(p.id, players);
+    const unclaimed = homeNeighbors.find(t => t.owner === null);
+    if (unclaimed) {
+      unclaimed.owner = p.id;
+      game._log(p.id, `starting claim: ${unclaimed.id}`);
+    }
+  }
 
   // Switch to game screen
   document.getElementById('setup-screen').style.display = 'none';
@@ -1322,7 +1297,6 @@ function updateSidebar() {
     <div class="stat-row stat-bond"><span class="label">Bond</span><span class="value">${cp.bond}</span></div>
     ${alliesHtml}
     <div class="stat-row"><span class="label">Position</span><span class="value">${cp.position}</span></div>
-    ${cp.housebound ? '<div class="stat-row" style="color:#c44">HOUSEBOUND</div>' : ''}
   `;
 
   // All players summary
@@ -1494,10 +1468,9 @@ async function runGame() {
       // Phase 2: Roll and Move
       setPhase(`${cfg.name} — Roll`);
       const d1 = Game.rollD6(), d2 = Game.rollD6();
-      let maxSteps = d1 + d2;
-      if (player.housebound) maxSteps = Math.floor(maxSteps / 2);
+      const maxSteps = d1 + d2;
       showDice(d1, d2, maxSteps);
-      addLogEntry(`${cfg.name} rolled ${d1}+${d2} = ${maxSteps}${player.housebound ? ' (housebound)' : ''}`, 'system');
+      addLogEntry(`${cfg.name} rolled ${d1}+${d2} = ${maxSteps}`, 'system');
       await delay(cfg.isAI ? 600 : 1200);
       hideDice();
 
@@ -1567,10 +1540,7 @@ async function runGame() {
         updateSidebar();
       }
 
-      // Phase 5: Maintenance
-      setPhase(`${cfg.name} — Maintenance`);
-      game.checkHousebound(player.id);
-      flushEngineLog();
+      // Phase 5: Win check
       const win = game.checkWinConditions();
       updateSidebar();
       if (win.gameOver) break;
@@ -1832,56 +1802,22 @@ async function doChallenge(player, cfg, targetId) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-//  AI PLAYER (strategic evaluation)
+//  AI PLAYER (goal-directed, priority-driven)
 // ═══════════════════════════════════════════════════════════════════════
 
-// ── 1. Per-archetype action weight tables ──
+const WALKABLE = ['sidewalk', 'intersection', 'sideStreet', 'path'];
 
-function getArchetypeWeights(archetypeKey) {
-  const tables = {
-    bruiser:  { claim: 2.0, challenge: 1.2, fortify: 0.6, ally: 0.3, drink: 1.0, breakAlliance: 0.4 },
-    scrapper: { claim: 1.2, challenge: 2.0, fortify: 0.4, ally: 0.5, drink: 0.8, breakAlliance: 0.6 },
-    diplomat: { claim: 1.0, challenge: 0.5, fortify: 0.8, ally: 2.0, drink: 1.0, breakAlliance: 0.8 },
-    yapper:   { claim: 0.8, challenge: 0.8, fortify: 2.0, ally: 0.6, drink: 1.0, breakAlliance: 0.3 },
-  };
-  return tables[archetypeKey] || tables.bruiser;
-}
-
-// ── 2. State assessment helpers ──
-
-function waterUrgency(player) {
-  const arch = ARCHETYPES[player.archetype];
-  const ratio = player.water / arch.water;
-  if (ratio >= 0.6) return 0.0;
-  if (ratio >= 0.3) return 1.0;
-  if (ratio > 0)    return 2.0;
-  return 3.0;
-}
-
-function isDesperation(player) {
-  return board.getTerritoriesOwnedBy(player.id).length === 0;
-}
-
-function getLeader() {
-  for (const p of game.players) {
-    if (board.getTerritoriesOwnedBy(p.id).length >= 7) return p;
-  }
-  return null;
-}
-
-// ── 3. BFS pathfinding ──
+// ── BFS within movement range (walkable spaces only) ──
 
 function bfsReachable(player, maxSteps) {
   const reachable = new Map();
-  // queue entries: [spaceId, stepsUsed, driveCost, parentId]
   const queue = [[player.position, 0, 0, null]];
   reachable.set(player.position, { steps: 0, driveCost: 0, parent: null });
 
   while (queue.length > 0) {
-    const [curId, steps, drCost, parentId] = queue.shift();
+    const [curId, steps, drCost] = queue.shift();
     if (steps >= maxSteps) continue;
 
-    const WALKABLE = ['sidewalk', 'intersection', 'sideStreet', 'path'];
     for (const n of board.getNeighbors(curId)) {
       if (!WALKABLE.includes(n.space.type)) continue;
       const nId = n.space.id;
@@ -1889,7 +1825,6 @@ function bfsReachable(player, maxSteps) {
       if (newDrive > player.drive) continue;
       const newSteps = steps + 1;
       const existing = reachable.get(nId);
-      // Accept if unvisited, or if new path is cheaper (fewer steps, then less drive)
       if (!existing || newSteps < existing.steps || (newSteps === existing.steps && newDrive < existing.driveCost)) {
         reachable.set(nId, { steps: newSteps, driveCost: newDrive, parent: curId });
         queue.push([nId, newSteps, newDrive, curId]);
@@ -1911,478 +1846,146 @@ function reconstructPath(reachable, targetId) {
   return path;
 }
 
-// ── 4. Board analysis helpers ──
+// ── Score a walkable destination by what's adjacent to it ──
 
-function nearestDistance(fromId, spaceType) {
-  const visited = new Set([fromId]);
-  const queue = [[fromId, 0]];
-  while (queue.length > 0) {
-    const [cur, dist] = queue.shift();
-    const s = board.getSpace(cur);
-    if (s && s.type === spaceType && dist > 0) return dist;
-    for (const n of board.getNeighbors(cur)) {
-      if (!visited.has(n.space.id)) {
-        visited.add(n.space.id);
-        queue.push([n.space.id, dist + 1]);
-      }
-    }
-  }
-  return Infinity;
-}
-
-function distanceToSpace(fromId, targetId) {
-  if (fromId === targetId) return 0;
-  const visited = new Set([fromId]);
-  const queue = [[fromId, 0]];
-  while (queue.length > 0) {
-    const [cur, dist] = queue.shift();
-    for (const n of board.getNeighbors(cur)) {
-      if (n.space.id === targetId) return dist + 1;
-      if (!visited.has(n.space.id)) {
-        visited.add(n.space.id);
-        queue.push([n.space.id, dist + 1]);
-      }
-    }
-  }
-  return Infinity;
-}
-
-function clusterProximityScore(playerId, spaceId) {
-  const neighbors = board.getNeighbors(spaceId);
-  let ownedAdjacentCount = 0;
-  let adjacentInPair = false;
-  let completesCluster = false;
-
-  for (const n of neighbors) {
-    if (n.space.type === SPACE_TYPES.TERRITORY && n.space.owner === playerId) {
-      ownedAdjacentCount++;
-      // Check if this adjacent territory is already in a pair (part of group of 2+)
-      for (const nn of board.getNeighbors(n.space.id)) {
-        if (nn.space.id !== spaceId && nn.space.type === SPACE_TYPES.TERRITORY && nn.space.owner === playerId) {
-          adjacentInPair = true;
-        }
-      }
-    }
-  }
-
-  if (ownedAdjacentCount >= 2) completesCluster = true;
-  if (ownedAdjacentCount >= 1 && adjacentInPair) completesCluster = true;
-
-  if (completesCluster) return 5.0;
-  if (ownedAdjacentCount >= 2) return 2.5;
-  if (ownedAdjacentCount === 1) return 1.0;
-  return 0.0;
-}
-
-function challengeWinProbability(attackerId, territoryId) {
-  const att = game.getPlayer(attackerId);
-  const space = board.getSpace(territoryId);
-  if (!space || !space.owner) return 0;
-  const def = game.getPlayer(space.owner);
-  if (!def) return 0;
-
-  const fortBonus = space.fortifyTokens;
-  const diplomatPenalty = att.archetype === 'diplomat' ? 1 : 0;
-  const gritPenalty = att.grit > game.config.gritPenaltyThreshold
-    ? att.grit - game.config.gritPenaltyThreshold : 0;
-  // Yapper adds 1 grit but doesn't affect current roll
-  const cluster = board.isInCluster(territoryId, space.owner);
-
-  let wins = 0;
-  for (let aRoll = 1; aRoll <= 6; aRoll++) {
-    for (let dRoll = 1; dRoll <= 6; dRoll++) {
-      const aT = aRoll - diplomatPenalty - gritPenalty;
-      const dT = dRoll + fortBonus;
-      if (aT > dT) {
-        wins++;
-      } else if (aT === dT && !cluster) {
-        // Ties re-roll — count as 0.5 win (recursive expectation)
-        wins += 0.5;
-      }
-    }
-  }
-  return wins / 36;
-}
-
-function clusterDisruptionValue(attackerId, territoryId) {
-  const space = board.getSpace(territoryId);
-  if (!space || !space.owner) return 0;
-  const defId = space.owner;
-
-  // Check what groups the defender has that include this territory
-  const groups = board.getConnectedTerritoryGroups(defId);
-  for (const g of groups) {
-    if (g.includes(territoryId)) {
-      if (g.length >= 3) return 4.0;  // Breaking a cluster
-      if (g.length === 2) return 2.0;  // Breaking a pair
-      return 0.5;
-    }
-  }
-  return 0;
-}
-
-function fortifyWorthiness(playerId, territoryId) {
-  const space = board.getSpace(territoryId);
-  if (!space || space.owner !== playerId) return -Infinity;
-
-  // Check if in a cluster or adjacent to owned territories
-  const neighbors = board.getNeighbors(territoryId);
-  let ownedAdjacentCount = 0;
-  let isHomeAdjacent = false;
-
-  for (const n of neighbors) {
-    if (n.space.type === SPACE_TYPES.TERRITORY && n.space.owner === playerId) ownedAdjacentCount++;
-    if (n.space.type === SPACE_TYPES.HOME && n.space.playerColour === game.getPlayer(playerId).colour) isHomeAdjacent = true;
-  }
-
-  // Hard block: isolated territories not worth fortifying
-  if (ownedAdjacentCount === 0 && !isHomeAdjacent) return -Infinity;
-
-  let score = 1.0;
-  if (board.isInCluster(territoryId, playerId)) score += 3.0;
-  else if (ownedAdjacentCount >= 1) score += 1.5;
-  if (isHomeAdjacent) score += 1.0;
-  // More valuable to fortify when tokens are low
-  score += (3 - space.fortifyTokens) * 0.5;
-  return score;
-}
-
-function allianceValue(player, dogParkSpaceId) {
-  let score = 1.5;
-  if (player.archetype === 'diplomat') score += 1.5;
-
-  // Prefer allying when there's a pending alliance that could catch opponents
-  if (game.pendingAlliances.has(dogParkSpaceId)) {
-    score -= 1.0; // Already pending — initiating here is redundant
-  }
-
-  // Value higher if opponents have more territories near us
-  const homeSpace = board.getHomeSpace(player.id, game.players);
-  if (homeSpace) {
-    const homeNeighbors = board.getHomeNeighbourhood(player.id, game.players);
-    const threatCount = homeNeighbors.filter(t => t.owner && t.owner !== player.id).length;
-    score += threatCount * 0.5;
-  }
-
-  return score;
-}
-
-function breakAllianceValue(player, alliedPlayerId) {
-  const leader = getLeader();
-  if (leader && leader.id === alliedPlayerId) return 3.0;
-
-  const allyTerritories = board.getTerritoriesOwnedBy(alliedPlayerId).length;
-  const myTerritories = board.getTerritoriesOwnedBy(player.id).length;
-
-  // Break if ally is significantly ahead
-  if (allyTerritories >= myTerritories + 3) return 2.0;
-  return 0.3;
-}
-
-// ── 5. Destination scoring ──
-
-function scoreDestination(player, destId, reachableInfo) {
+function scoreWalkableDest(player, destId, steps) {
   const arch = ARCHETYPES[player.archetype];
-  const weights = getArchetypeWeights(player.archetype);
-  const space = board.getSpace(destId);
-  if (!space) return -Infinity;
-
-  const desperate = isDesperation(player);
-  const urgency = waterUrgency(player);
-  const leader = getLeader();
+  const neighbors = board.getNeighbors(destId);
   let score = 0;
 
-  // Hard rule: water=1 + not at home → penalize moving away from home or water
-  if (player.water <= 1) {
-    const homeSpace = board.getHomeSpace(player.id, game.players);
-    if (homeSpace) {
-      const homeDist = distanceToSpace(destId, homeSpace.id);
-      const curHomeDist = distanceToSpace(player.position, homeSpace.id);
-      const waterDist = nearestDistance(destId, SPACE_TYPES.WATER_SOURCE);
-      if (homeDist > curHomeDist && waterDist > 2) {
-        return -Infinity;
+  for (const n of neighbors) {
+    const s = n.space;
+    if (s.type === SPACE_TYPES.TERRITORY) {
+      if (s.owner === null) {
+        // Unclaimed territory — high priority if we can claim
+        if (player.water >= 2 && player.swagger >= 1) score += 10;
+        else score += 2; // Still worth moving near for later
+      } else if (s.owner !== player.id && !player.allies.includes(s.owner)) {
+        // Opponent territory — worth challenging if affordable
+        if (player.water >= 2 && player.drive >= 1) score += 5;
+        else score += 1;
+      } else if (s.owner === player.id && s.fortifyTokens < game.config.maxFortify) {
+        // Own territory, can fortify
+        if (player.water >= 1 && player.grit >= 1) score += 3;
       }
+    }
+    if (s.type === SPACE_TYPES.WATER_SOURCE && player.water < arch.water) {
+      // Water source — urgent if low water
+      if (player.water <= 1) score += 15;
+      else if (player.water <= Math.ceil(arch.water / 2)) score += 8;
+      else score += 2;
+    }
+    if (s.type === SPACE_TYPES.HOME && s.playerColour === player.colour) {
+      // Own home — resupply value
+      const deficit = (arch.water - player.water) + (arch.swagger - player.swagger) +
+                      (arch.drive - player.drive);
+      if (player.water <= 1) score += 12;
+      else if (deficit >= 3) score += 6;
+      else score += 1;
+    }
+    if (s.type === SPACE_TYPES.DOG_PARK) {
+      if (player.water >= 1 && player.bond >= 1) score += 2;
     }
   }
 
-  // Evaluate based on space type and surroundings
-  switch (space.type) {
-    case SPACE_TYPES.TERRITORY: {
-      if (space.owner === null) {
-        // Unclaimed territory
-        const clusterBonus = clusterProximityScore(player.id, destId);
-        if (desperate) {
-          score += 10.0;
-        } else {
-          score += (3.0 + clusterBonus) * weights.claim;
-        }
-      } else if (space.owner !== player.id) {
-        // Opponent territory — potential challenge
-        const winProb = challengeWinProbability(player.id, destId);
-        const disruption = clusterDisruptionValue(player.id, destId);
-        score += winProb * (3.0 + disruption * 2.0) * weights.challenge;
-        if (leader && space.owner === leader.id) score *= 1.8;
-        // Don't encourage challenges when we can't afford them
-        if (player.water < 2 || player.drive < 1) score *= 0.1;
-      } else {
-        // Own territory — potential fortify
-        const worth = fortifyWorthiness(player.id, destId);
-        if (worth > -Infinity) {
-          score += worth * weights.fortify * 0.5;
-        }
-      }
-      break;
-    }
-    case SPACE_TYPES.WATER_SOURCE: {
-      score += urgency * 2.5 * weights.drink;
-      if (player.water <= 1) score += 5.0;
-      break;
-    }
-    case SPACE_TYPES.HOME: {
-      if (space.playerColour === player.colour) {
-        // Own home — resupply value
-        score += urgency * 2.0;
-        // General resource deficit
-        const deficit = (arch.water - player.water) + (arch.swagger - player.swagger) +
-                        (arch.drive - player.drive) + (arch.bond - player.bond);
-        score += Math.max(0, deficit) * 0.3;
-        if (player.water <= 1) score += 4.0;
-      }
-      break;
-    }
-    case SPACE_TYPES.DOG_PARK: {
-      score += allianceValue(player, destId) * weights.ally * 0.5;
-      break;
-    }
-    case SPACE_TYPES.CHANCE_SPOT: {
-      score += 1.0; // Mild bonus for chance spots
-      break;
-    }
-    case SPACE_TYPES.PATH: {
-      score += 0.5; // Shortcuts have repositioning value
-      break;
-    }
-    default: break;
-  }
-
-  // Also evaluate neighbors of destination (what actions become available there)
-  const destNeighbors = board.getNeighbors(destId);
-  for (const n of destNeighbors) {
-    if (n.space.type === SPACE_TYPES.TERRITORY && n.space.owner === null) {
-      const clusterBonus = clusterProximityScore(player.id, n.space.id);
-      const neighborVal = desperate ? 5.0 : (1.5 + clusterBonus * 0.5) * weights.claim;
-      score += neighborVal * 0.3; // Discounted since it's adjacent, not at dest
-    }
-    if (n.space.type === SPACE_TYPES.WATER_SOURCE && urgency > 0) {
-      score += urgency * 0.5;
-    }
-  }
-
-  // Dead-end penalty
-  if (destNeighbors.length <= 1) score -= 2.0;
-
-  // Distance penalty
-  score -= reachableInfo.steps * 0.1;
-
+  // Slight distance penalty to prefer closer goals
+  score -= steps * 0.2;
   return score;
 }
 
-// ── 6. Action scoring ──
-
-function scoreAction(player, action) {
-  const weights = getArchetypeWeights(player.archetype);
-  const desperate = isDesperation(player);
-  const leader = getLeader();
-  let score = 0;
-
-  switch (action.type) {
-    case 'claim': {
-      const clusterBonus = clusterProximityScore(player.id, action.targetId);
-      score = (3.0 + clusterBonus) * weights.claim;
-      if (desperate) score += 10.0;
-      // Simulate swagger income delta: check if claiming adds to connected groups
-      const groups = board.getConnectedTerritoryGroups(player.id);
-      const currentIncome = groups.reduce((t, g) => t + Math.floor(g.length / game.config.swaggerPerTerritories), 0);
-      // Temporarily claim to check new income
-      const space = board.getSpace(action.targetId);
-      space.owner = player.id;
-      const newGroups = board.getConnectedTerritoryGroups(player.id);
-      const newIncome = newGroups.reduce((t, g) => t + Math.floor(g.length / game.config.swaggerPerTerritories), 0);
-      space.owner = null; // Restore
-      const incomeDelta = newIncome - currentIncome;
-      score += incomeDelta * 2.0;
-      break;
-    }
-    case 'challenge': {
-      const winProb = challengeWinProbability(player.id, action.targetId);
-      const disruption = clusterDisruptionValue(player.id, action.targetId);
-      score = winProb * (3.0 + disruption * 2.0) * weights.challenge;
-      // Leader targeting
-      const space = board.getSpace(action.targetId);
-      if (leader && space && space.owner === leader.id) score *= 2.0;
-      // Grit threshold penalty
-      if (player.grit >= game.config.gritPenaltyThreshold) score *= 0.5;
-      // Yapper caution
-      if (space && space.owner) {
-        const def = game.getPlayer(space.owner);
-        if (def && def.archetype === 'yapper') score *= 0.7;
-      }
-      break;
-    }
-    case 'fortify': {
-      const worth = fortifyWorthiness(player.id, action.targetId);
-      score = worth * weights.fortify;
-      break;
-    }
-    case 'ally': {
-      score = allianceValue(player, action.targetId) * weights.ally;
-      break;
-    }
-    case 'breakAlliance': {
-      score = breakAllianceValue(player, action.targetId) * weights.breakAlliance;
-      break;
-    }
-    case 'drink': {
-      const urgency = waterUrgency(player);
-      score = urgency * 2.0 * weights.drink;
-      if (player.water <= 1) score += 5.0;
-      break;
-    }
-    case 'shortcut': {
-      score = 1.5;
-      break;
-    }
-  }
-
-  // Resource conservation: actions that drop water below 2 get penalty
-  const waterCosts = { claim: 2, challenge: 2, fortify: 1, ally: 1, breakAlliance: 1, drink: 0, shortcut: 0 };
-  const waterAfter = player.water - (waterCosts[action.type] || 0);
-  if (waterAfter < 2 && waterAfter >= 0) score *= 0.6;
-
-  return score;
-}
-
-// ── 7. Hard rule enforcement ──
-
-function applyHardRules(player, actionsWithScores) {
-  let mustAct = false;
-
-  for (const item of actionsWithScores) {
-    // Never fortify isolated territory
-    if (item.action.type === 'fortify') {
-      const worth = fortifyWorthiness(player.id, item.action.targetId);
-      if (worth === -Infinity) item.score = -Infinity;
-    }
-
-    // Never challenge allied player
-    if (item.action.type === 'challenge') {
-      const space = board.getSpace(item.action.targetId);
-      if (space && space.owner && player.allies.includes(space.owner)) {
-        item.score = -Infinity;
-      }
-    }
-
-    // If a claim is available and affordable, AI must act
-    if (item.action.type === 'claim' && item.score > -Infinity) {
-      mustAct = true;
-    }
-  }
-
-  return mustAct;
-}
-
-// ── 8. AI path computation (BFS + scored destinations) ──
+// ── Goal-directed AI movement ──
 
 function aiComputePath(player, maxSteps) {
   const reachable = bfsReachable(player, maxSteps);
 
-  // Score every reachable destination
   let bestScore = -Infinity;
   let bestDest = player.position;
 
   for (const [destId, info] of reachable) {
-    if (destId === player.position && reachable.size > 1) continue; // Prefer moving
-    const score = scoreDestination(player, destId, info);
+    const score = scoreWalkableDest(player, destId, info.steps);
     if (score > bestScore) {
       bestScore = score;
       bestDest = destId;
     }
   }
 
-  // Desperation override: if no destination scored well but we're desperate, pick any unclaimed territory
-  if (bestScore <= 0 && isDesperation(player)) {
-    for (const [destId, info] of reachable) {
-      const s = board.getSpace(destId);
-      if (s && s.type === SPACE_TYPES.TERRITORY && s.owner === null) {
-        bestDest = destId;
-        break;
-      }
-      // Also check neighbors of reachable spaces
-      for (const n of board.getNeighbors(destId)) {
-        if (n.space.type === SPACE_TYPES.TERRITORY && n.space.owner === null && reachable.has(destId)) {
+  // If nothing scored well, try to move toward home
+  if (bestScore <= 0) {
+    const homeSpace = board.getHomeSpace(player.id, game.players);
+    if (homeSpace) {
+      // Find the reachable space closest to home (BFS distance)
+      let bestHomeDist = Infinity;
+      for (const [destId] of reachable) {
+        if (destId === player.position) continue;
+        // Quick BFS from destId to home
+        const visited = new Set([destId]);
+        const queue = [[destId, 0]];
+        let dist = Infinity;
+        while (queue.length > 0) {
+          const [cur, d] = queue.shift();
+          if (cur === homeSpace.id) { dist = d; break; }
+          for (const nb of board.getNeighbors(cur)) {
+            if (!visited.has(nb.space.id)) {
+              visited.add(nb.space.id);
+              queue.push([nb.space.id, d + 1]);
+            }
+          }
+        }
+        if (dist < bestHomeDist) {
+          bestHomeDist = dist;
           bestDest = destId;
-          break;
         }
       }
     }
   }
 
-  // Stay put if nothing scores positively (and not desperate)
-  if (bestScore <= 0 && !isDesperation(player)) {
-    return [player.position];
-  }
+  if (bestDest === player.position) return [player.position];
 
   const path = reconstructPath(reachable, bestDest);
-  // Ensure path starts at player position
   if (path.length === 0 || path[0] !== player.position) return [player.position];
   return path;
 }
 
-// ── 9. AI action selection (scored + hard rules) ──
+// ── Priority-driven AI action selection ──
 
 async function aiDoAction(player, cfg) {
   await delay(400);
   const actionable = getActionableSpaces(player);
-  if (actionable.length === 0) {
-    addLogEntry(`${cfg.name} (AI) passes.`, 'system');
-    return;
-  }
-
-  // Score every available action
   const allActions = actionable.flatMap(a => a.actions);
   if (allActions.length === 0) {
-    addLogEntry(`${cfg.name} (AI) passes.`, 'system');
+    addLogEntry(`${cfg.name} (AI): no actions available.`, 'system');
     return;
   }
 
-  const scored = allActions.map(action => ({
-    action,
-    score: scoreAction(player, action),
-  }));
+  const arch = ARCHETYPES[player.archetype];
 
-  // Apply hard rules
-  const mustAct = applyHardRules(player, scored);
-
-  // Sort by score descending
-  scored.sort((a, b) => b.score - a.score);
-
-  // If mustAct (claim available), force the best claim
-  if (mustAct) {
-    const bestClaim = scored.find(s => s.action.type === 'claim' && s.score > -Infinity);
-    if (bestClaim) {
-      await executeAction(player, cfg, bestClaim.action);
-      return;
-    }
+  // Priority 1: Drink if water below max and a drink action is available
+  if (player.water < arch.water) {
+    const drink = allActions.find(a => a.type === 'drink');
+    if (drink) { await executeAction(player, cfg, drink); return; }
   }
 
-  // Pick the best scoring action, pass if score <= 0
-  const best = scored[0];
-  if (!best || best.score <= 0) {
-    addLogEntry(`${cfg.name} (AI) passes.`, 'system');
-    return;
-  }
+  // Priority 2: Claim any available territory
+  const claim = allActions.find(a => a.type === 'claim');
+  if (claim) { await executeAction(player, cfg, claim); return; }
 
-  await executeAction(player, cfg, best.action);
+  // Priority 3: Challenge an opponent territory
+  const challenge = allActions.find(a => a.type === 'challenge');
+  if (challenge) { await executeAction(player, cfg, challenge); return; }
+
+  // Priority 4: Fortify an owned territory
+  const fortify = allActions.find(a => a.type === 'fortify');
+  if (fortify) { await executeAction(player, cfg, fortify); return; }
+
+  // Priority 5: Ally at a dog park
+  const ally = allActions.find(a => a.type === 'ally');
+  if (ally) { await executeAction(player, cfg, ally); return; }
+
+  // Priority 6: Take a shortcut
+  const shortcut = allActions.find(a => a.type === 'shortcut');
+  if (shortcut) { await executeAction(player, cfg, shortcut); return; }
+
+  addLogEntry(`${cfg.name} (AI): no affordable actions.`, 'system');
 }
 
 // ═══════════════════════════════════════════════════════════════════════
